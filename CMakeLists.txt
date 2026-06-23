@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 project(cpp_token_counting CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(CMAKE_CXX_STANDARD 23)
+
 set(CMAKE_CXX_STANDARD 23)
 
 find_package(re2 REQUIRED)
