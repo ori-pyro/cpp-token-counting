@@ -30,11 +30,10 @@ int main() {
             if (!file) return 1;
 
             stringstream buffer;
-            buffer << file.rdbuf();
+            buffer << file.rdbuf();                     //TODO Сделать убирание пробелов через оператор << и цикл while
             string code = buffer.str();                 // Весь код в одну строку
         }
     }
-
 
     return 0;
 }

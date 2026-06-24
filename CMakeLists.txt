@@ -40,6 +40,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_link_libraries(imgui PUBLIC raylib)
@@ -71,7 +72,7 @@ target_link_libraries(token_counter PRIVATE
 )
 
 # Separate executable for framework with ImGui
-add_executable(framework framework.cpp)
+add_executable(framework WIN32 framework.cpp)
 target_link_libraries(framework PRIVATE
     rlimgui_lib
     imgui
