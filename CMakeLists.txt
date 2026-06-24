@@ -21,11 +21,19 @@ FetchContent_MakeAvailable(raylib)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG docking
+    GIT_TAG master
 )
 FetchContent_MakeAvailable(imgui)
 
-# Create ImGui library
+# Fetch rlImGui
+FetchContent_Declare(
+    rlimgui
+    GIT_REPOSITORY https://github.com/raylib-extras/rlImGui.git
+    GIT_TAG main
+)
+FetchContent_MakeAvailable(rlimgui)
+
+# Create ImGui library (core only, without backend)
 add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
@@ -33,8 +41,15 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
 )
-target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR})
+target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_link_libraries(imgui PUBLIC raylib)
+
+# Create rlImGui library (raylib + ImGui integration)
+add_library(rlimgui_lib STATIC
+    ${rlimgui_SOURCE_DIR}/rlImGui.cpp
+)
+target_include_directories(rlimgui_lib PUBLIC ${rlimgui_SOURCE_DIR} ${imgui_SOURCE_DIR})
+target_link_libraries(rlimgui_lib PUBLIC raylib imgui)
 
 # Fetch re2
 set(RE2_BUILD_TESTING OFF CACHE BOOL "")
@@ -45,11 +60,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(re2)
 
-# Your executable
+# Main executable (excluding framework.cpp)
 file(GLOB SOURCES "*.cpp")
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/framework.cpp")
 add_executable(token_counter ${SOURCES})
 target_link_libraries(token_counter PRIVATE
     imgui
     re2::re2
+    raylib
+)
+
+# Separate executable for framework with ImGui
+add_executable(framework framework.cpp)
+target_link_libraries(framework PRIVATE
+    rlimgui_lib
+    imgui
     raylib
 )
