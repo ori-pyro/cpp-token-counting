@@ -6,62 +6,83 @@
 #include <misc/cpp/imgui_stdlib.h>  // Работа с std::string в ImGui
 using namespace std;
 
-const int WIDTH = 800;
-const int HEIGHT = 300;
-const int TITLE_BAR_HEIGHT = 40;
-const int CLOSE_BUTTON_WIDTH = 40;
-const int INPUT_BUTTON_WIDTH = 80;
+class Framework {
+public:
+    const float WIDTH = 800.0f;
+    const float HEIGHT = 500.0f;
+    const float TITLE_BAR_HEIGHT = 40.0f;
+    const float CLOSE_BUTTON_WIDTH = 40.0f;
+    const float INPUT_BUTTON_WIDTH = 80.0f;
 
-// ЦВЕТА
-const ImVec4 BASIC_COLOR(36.0/255.0f, 39/255.0f, 58/255.0f, 1.0f);
-const ImVec4 BASIC_COLOR_HIGHLIGHTED(47.0/255.0f, 50/255.0f, 71/255.0f, 1.0f);
-const ImVec4 BASIC_COLOR_ACTIVATED(68.0/255.0f, 72/255.0f, 94/255.0f, 1.0f);
-const ImVec4 TITLEBAR_COLOR(24.0/255.0f, 25/255.0f, 38/255.0f, 1.0f);
-const ImVec4 TITLEBAR_COLOR_HIGHLIGHTED(39.0/255.0f, 41/255.0f, 57/255.0f, 1.0f);
-const ImVec4 TITLEBAR_COLOR_ACTIVATED(64.0/255.0f, 68/255.0f, 87/255.0f, 1.0f);
-const ImVec4 CLOSE_BUTTON_HOVERED_COLOR(0.8f, 0.12f, 0.12f, 1.0f);
-const ImVec4 CLOSE_BUTTON_ACTIVE_COLOR(0.6f, 0.12f, 0.12f, 1.0f);
+    // ЦВЕТА
+    const ImVec4 BASIC_COLOR = ImVec4(36.0/255.0f, 39/255.0f, 58/255.0f, 1.0f);
+    const ImVec4 BASIC_COLOR_HIGHLIGHTED = ImVec4(47.0/255.0f, 50/255.0f, 71/255.0f, 1.0f);
+    const ImVec4 BASIC_COLOR_ACTIVATED = ImVec4(68.0/255.0f, 72/255.0f, 94/255.0f, 1.0f);
+    const ImVec4 TITLEBAR_COLOR = ImVec4(24.0/255.0f, 25/255.0f, 38/255.0f, 1.0f);
+    const ImVec4 TITLEBAR_COLOR_HIGHLIGHTED = ImVec4(39.0/255.0f, 41/255.0f, 57/255.0f, 1.0f);
+    const ImVec4 TITLEBAR_COLOR_ACTIVATED = ImVec4(64.0/255.0f, 68/255.0f, 87/255.0f, 1.0f);
+    const ImVec4 CLOSE_BUTTON_HOVERED_COLOR = ImVec4(0.8f, 0.12f, 0.12f, 1.0f);
+    const ImVec4 CLOSE_BUTTON_ACTIVE_COLOR = ImVec4(0.6f, 0.12f, 0.12f, 1.0f);
 
-int main() {
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED);        // Настройки внешнего окна Raylib (без рамок)
-    InitWindow(WIDTH, HEIGHT, "Lexeme Counter");
-    SetTargetFPS(60);
+    ImFont* regular_font = nullptr;
+    ImFont* small_font = nullptr;
 
-    rlImGuiSetup(true); // Иниициализация ImGui и интеграция с RayLib
-                        // Запускает внутри себя ImGui::CreateContext()
+    string dir_path = "";
+    string input_buffer = "";
 
-    ImGuiIO& io = ImGui::GetIO(); // Настройки ImGui Input/Output
+    bool isDragging;
+    Rectangle titleBarRect;
+    Vector2 dragOffset;
 
-    ImFont* myCustomFont = io.Fonts->AddFontFromMemoryCompressedTTF(
-            myFontData_compressed_data,        // Имя массива из JetBrainsMonoFont.h
-            myFontData_compressed_size,        // Размер массива из JetBrainsMonoFont.h
-            24.0f,                             // Размер шрифта в пикселях
-            nullptr,                           // Настройки (оставляем nullptr)
-            io.Fonts->GetGlyphRangesCyrillic() // ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
-        );
+    Framework() {
+        SetConfigFlags(FLAG_WINDOW_UNDECORATED);        // Настройки внешнего окна Raylib (без рамок)
+        InitWindow(WIDTH, HEIGHT, "Lexeme Counter");
+        SetTargetFPS(60);
 
-    // Делаем шрифтом по умлочанию
-    if (myCustomFont != nullptr) {
-        io.FontDefault = myCustomFont;
+        rlImGuiSetup(true); // Иниициализация ImGui и интеграция с RayLib
+                            // Запускает внутри себя ImGui::CreateContext()
+
+        ImGuiIO& io = ImGui::GetIO();
+
+        // ШРИФТЫ
+        regular_font = io.Fonts->AddFontFromMemoryCompressedTTF(
+                myFontData_compressed_data,        // Имя массива из JetBrainsMonoFont.h
+                myFontData_compressed_size,        // Размер массива из JetBrainsMonoFont.h
+                24.0f,                             // Размер шрифта в пикселях
+                nullptr,                           // Настройки (оставляем nullptr)
+                io.Fonts->GetGlyphRangesCyrillic() // ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
+            );
+        small_font = io.Fonts->AddFontFromMemoryCompressedTTF(
+                myFontData_compressed_data,        // Имя массива из JetBrainsMonoFont.h
+                myFontData_compressed_size,        // Размер массива из JetBrainsMonoFont.h
+                18.0f,                             // Размер шрифта в пикселях
+                nullptr,                           // Настройки (оставляем nullptr)
+                io.Fonts->GetGlyphRangesCyrillic() // ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
+            );
+
+        // Делаем шрифтом по умлочанию
+        if (regular_font != nullptr) {
+            io.FontDefault = regular_font;
+        }
+
+        ImGui::GetIO().IniFilename = nullptr; // Отключаем создание imgui.ini
+
+        // КАСТОМНЫЙ ТАЙТЛБАР
+        titleBarRect = { 0, 0, WIDTH, TITLE_BAR_HEIGHT };
+        isDragging = false;
+        dragOffset = { 0, 0 }; // Координаты мыши относительно левого верхнего угла окна
+
+        // ГЛОБАЛЬНЫЕ НАСТРОЙКИ СТИЛЯ КНОПОК
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.Colors[ImGuiCol_Button]        = BASIC_COLOR;             // Обычная
+        style.Colors[ImGuiCol_ButtonHovered] = BASIC_COLOR_HIGHLIGHTED; // При наведении
+        style.Colors[ImGuiCol_ButtonActive]  = BASIC_COLOR_ACTIVATED;   // При нажатии
+
+        // СТИЛЬ РАМОК
+        style.Colors[ImGuiCol_Border] = TITLEBAR_COLOR_ACTIVATED;
     }
 
-    ImGui::GetIO().IniFilename = nullptr; // Отключаем создание imgui.ini
-
-    // КАСТОМНЫЙ ТАЙТЛБАР
-    Rectangle titleBarRect = { 0, 0, WIDTH, TITLE_BAR_HEIGHT };
-    bool isDragging = false;
-    Vector2 dragOffset = { 0, 0 }; // Координаты мыши относительно левого верхнего угла окна
-
-    // ГЛОБАЛЬНЫЕ НАСТРОЙКИ СТИЛЯ КНОПОК
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.Colors[ImGuiCol_Button]        = BASIC_COLOR;             // Обычная
-    style.Colors[ImGuiCol_ButtonHovered] = BASIC_COLOR_HIGHLIGHTED; // При наведении
-    style.Colors[ImGuiCol_ButtonActive]  = BASIC_COLOR_ACTIVATED;   // При нажатии
-
-    // СТИЛЬ РАМОК
-    style.Colors[ImGuiCol_Border] = TITLEBAR_COLOR_ACTIVATED;
-
-    while (!WindowShouldClose()) {
+    bool draw_GUI() {
         titleBarRect.width = (float)GetScreenWidth();
 
         Vector2 mousePos = GetMousePosition();
@@ -103,7 +124,6 @@ int main() {
 
         rlImGuiBegin();
 
-
         ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(GetScreenWidth(), GetScreenHeight()), ImGuiCond_Always);
 
@@ -112,7 +132,6 @@ int main() {
                                  ImGuiWindowFlags_NoMove |
                                  ImGuiWindowFlags_NoCollapse |
                                  ImGuiWindowFlags_NoBringToFrontOnFocus;
-
 
         // ====================================================================
         // ВИЗУАЛ КАСТОМНОГО ТАЙТЛБАРА
@@ -128,17 +147,35 @@ int main() {
 
         ImGui::BeginChild("FakeTitleBarVisual", ImVec2(0, TITLE_BAR_HEIGHT), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
 
-            ImGui::Text("Lexeme Counter");
+            // Заголовок тайтлбара
+            ImGui::PushFont(regular_font, 20.0f);
+                ImGui::Text("Lexeme Counter");
+            ImGui::PopFont();
 
             ImGui::SameLine(ImGui::GetWindowWidth() - CLOSE_BUTTON_WIDTH);
             ImGui::SetCursorPosY(0);
 
             // Стиль кнопки закрытия
-            ImGui::PushStyleColor(ImGuiCol_Button, BASIC_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_Button, TITLEBAR_COLOR);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, CLOSE_BUTTON_ACTIVE_COLOR);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, CLOSE_BUTTON_HOVERED_COLOR);
-                if (ImGui::Button("x", ImVec2(CLOSE_BUTTON_WIDTH, TITLE_BAR_HEIGHT))) {
-                    break;
+                if (ImGui::Button("✕", ImVec2(CLOSE_BUTTON_WIDTH, TITLE_BAR_HEIGHT))) {
+                    return false;
+                }
+            ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
+
+
+            ImGui::SameLine(ImGui::GetWindowWidth() - CLOSE_BUTTON_WIDTH * 2);
+            ImGui::SetCursorPosY(0);
+
+            // Стиль кнопки сворачивания
+            ImGui::PushStyleColor(ImGuiCol_Button, TITLEBAR_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, TITLEBAR_COLOR_HIGHLIGHTED);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, TITLEBAR_COLOR_ACTIVATED);
+                if (ImGui::Button("—", ImVec2(CLOSE_BUTTON_WIDTH, TITLE_BAR_HEIGHT))) {
+                    MinimizeWindow();
                 }
             ImGui::PopStyleColor();
             ImGui::PopStyleColor();
@@ -161,9 +198,6 @@ int main() {
         ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
         ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
 
-            static string dir_path = "";
-            static string input_buffer = "";
-
             // Поле ввода
             ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR_HIGHLIGHTED);
                 ImGui::SetNextItemWidth(-INPUT_BUTTON_WIDTH);
@@ -173,7 +207,6 @@ int main() {
                     }
                 ImGui::PopStyleColor();
             ImGui::PopStyleColor();
-
 
             // Кнопка ввода
             ImGui::SameLine();
@@ -191,11 +224,25 @@ int main() {
         rlImGuiEnd();
         EndDrawing();
 
+        return true;
     }
 
-    rlImGuiShutdown();
-    CloseWindow();
+    ~Framework() {
+        rlImGuiShutdown();
+        CloseWindow();
+    }
+};
 
+
+
+int main() {
+    Framework GUI;
+
+    while (!WindowShouldClose()) {
+        if (!GUI.draw_GUI()) {
+            break;
+        }
+    }
 
     return 0;
 }
