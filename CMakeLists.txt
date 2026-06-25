@@ -72,7 +72,8 @@ target_link_libraries(token_counter PRIVATE
 )
 
 # Separate executable for framework with ImGui
-add_executable(framework WIN32 framework.cpp)
+# add_executable(framework WIN32 framework.cpp)
+add_executable(framework framework.cpp)
 target_link_libraries(framework PRIVATE
     rlimgui_lib
     imgui

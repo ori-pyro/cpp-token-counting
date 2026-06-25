@@ -1,78 +1,87 @@
 #include <iostream>
-#include "imgui.h"
-#include "raylib.h"
-#include "rlImGui.h"
+#include "imgui.h"                  // Фреймворк
+#include "raylib.h"                 // Бэкенд для ImGui
+#include "rlImGui.h"                // Мостик между RayLib и ImGui
 #include "JetBrainsMono.h"          // Подключаем шрифт
-#include <misc/cpp/imgui_stdlib.h>
+#include <misc/cpp/imgui_stdlib.h>  // Работа с std::string в ImGui
 using namespace std;
 
 const int WIDTH = 800;
 const int HEIGHT = 300;
 const int TITLE_BAR_HEIGHT = 40;
 const int CLOSE_BUTTON_WIDTH = 40;
+const int INPUT_BUTTON_WIDTH = 80;
 
+// ЦВЕТА
+const ImVec4 BASIC_COLOR(36.0/255.0f, 39/255.0f, 58/255.0f, 1.0f);
+const ImVec4 BASIC_COLOR_HIGHLIGHTED(47.0/255.0f, 50/255.0f, 71/255.0f, 1.0f);
+const ImVec4 BASIC_COLOR_ACTIVATED(68.0/255.0f, 72/255.0f, 94/255.0f, 1.0f);
+const ImVec4 TITLEBAR_COLOR(24.0/255.0f, 25/255.0f, 38/255.0f, 1.0f);
+const ImVec4 TITLEBAR_COLOR_HIGHLIGHTED(39.0/255.0f, 41/255.0f, 57/255.0f, 1.0f);
+const ImVec4 TITLEBAR_COLOR_ACTIVATED(64.0/255.0f, 68/255.0f, 87/255.0f, 1.0f);
+const ImVec4 CLOSE_BUTTON_HOVERED_COLOR(0.8f, 0.12f, 0.12f, 1.0f);
+const ImVec4 CLOSE_BUTTON_ACTIVE_COLOR(0.6f, 0.12f, 0.12f, 1.0f);
 
 int main() {
-    // Настройки внешнего окна Raylib (без рамок)
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED);
+    SetConfigFlags(FLAG_WINDOW_UNDECORATED);        // Настройки внешнего окна Raylib (без рамок)
     InitWindow(WIDTH, HEIGHT, "Lexeme Counter");
     SetTargetFPS(60);
 
-    rlImGuiSetup(true);
+    rlImGuiSetup(true); // Иниициализация ImGui и интеграция с RayLib
+                        // Запускает внутри себя ImGui::CreateContext()
 
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(); // Настройки ImGui Input/Output
 
     ImFont* myCustomFont = io.Fonts->AddFontFromMemoryCompressedTTF(
             myFontData_compressed_data,        // Имя массива из JetBrainsMonoFont.h
             myFontData_compressed_size,        // Размер массива из JetBrainsMonoFont.h
-            24.0f,                             // Размер шрифта в пикселях (например, 16)
+            24.0f,                             // Размер шрифта в пикселях
             nullptr,                           // Настройки (оставляем nullptr)
-            io.Fonts->GetGlyphRangesCyrillic() // <--- ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
+            io.Fonts->GetGlyphRangesCyrillic() // ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
         );
 
-    // 4. ДЕЛАЕМ ШРИФТ ПО УМОЛЧАНИЮ
+    // Делаем шрифтом по умлочанию
     if (myCustomFont != nullptr) {
         io.FontDefault = myCustomFont;
     }
 
+    ImGui::GetIO().IniFilename = nullptr; // Отключаем создание imgui.ini
 
-    ImGui::GetIO().IniFilename = nullptr;
-
-    // Прямоугольник нашей кастомной плашки
+    // КАСТОМНЫЙ ТАЙТЛБАР
     Rectangle titleBarRect = { 0, 0, WIDTH, TITLE_BAR_HEIGHT };
-
-    // Переменные для отслеживания состояния перетаскивания
     bool isDragging = false;
-    Vector2 dragOffset = { 0, 0 };
+    Vector2 dragOffset = { 0, 0 }; // Координаты мыши относительно левого верхнего угла окна
+
+    // ГЛОБАЛЬНЫЕ НАСТРОЙКИ СТИЛЯ КНОПОК
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.Colors[ImGuiCol_Button]        = BASIC_COLOR;             // Обычная
+    style.Colors[ImGuiCol_ButtonHovered] = BASIC_COLOR_HIGHLIGHTED; // При наведении
+    style.Colors[ImGuiCol_ButtonActive]  = BASIC_COLOR_ACTIVATED;   // При нажатии
+
+    // СТИЛЬ РАМОК
+    style.Colors[ImGuiCol_Border] = TITLEBAR_COLOR_ACTIVATED;
 
     while (!WindowShouldClose()) {
         titleBarRect.width = (float)GetScreenWidth();
 
         Vector2 mousePos = GetMousePosition();
 
-        // 1. Фиксируем момент клика по плашке
+        // Двигание окна, зажатием тайтлбара
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
             CheckCollisionPointRec(mousePos, titleBarRect))
         {
-            // Проверяем, что кликнули не на кнопку закрытия (правые 45 пикселей)
-            if (mousePos.x < (GetScreenWidth() - CLOSE_BUTTON_WIDTH)) {
+            if (mousePos.x < (GetScreenWidth() - CLOSE_BUTTON_WIDTH)) { // Проверяем что не попали кнопку закрытия
                 isDragging = true;
-                // Запоминаем, в каком именно месте плашки мы зажали курсор
                 dragOffset = mousePos;
             }
         }
 
-        // 2. Пока кнопка зажата — двигаем окно вслед за глобальными координатами
+        // Двигаем окно
         if (isDragging) {
             if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                // Получаем текущую позицию окна на рабочем столе
                 Vector2 currentWinPos = GetWindowPosition();
-
-                // Рассчитываем, куда должен переместиться левый верхний угол окна,
-                // чтобы курсор оставался ровно в той же точке плашки, где мы кликнули
                 int nextX = (int)(currentWinPos.x + mousePos.x - dragOffset.x);
                 int nextY = (int)(currentWinPos.y + mousePos.y - dragOffset.y);
-
                 SetWindowPosition(nextX, nextY);
             } else {
                 isDragging = false; // Отпустили мышь — закончили движение
@@ -82,7 +91,18 @@ int main() {
         BeginDrawing();
         ClearBackground(DARKGRAY);
 
+        // Если мышь за пределами окна,
+        // то сообщаем ImGui об этом, иначе он
+        // будет думать, что курсор осталься на краю окна
+        if (!IsCursorOnScreen()) {
+            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+            ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+        } else {
+            ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+        }
+
         rlImGuiBegin();
+
 
         ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(GetScreenWidth(), GetScreenHeight()), ImGuiCond_Always);
@@ -93,67 +113,81 @@ int main() {
                                  ImGuiWindowFlags_NoCollapse |
                                  ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-        // 1. Убираем внутренние отступы окна в ноль ПЕРЕД созданием MainPanel
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
+        // ====================================================================
+        // ВИЗУАЛ КАСТОМНОГО ТАЙТЛБАРА
+        // ====================================================================
+
+        // Убираем внутренние отступы окна в ноль
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("MainPanel", nullptr, flags);
 
-        // ====================================================================
-        // ВИЗУАЛ КАСТОМНОЙ ПЛАШКИ
-        // ====================================================================
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, TITLEBAR_COLOR);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-        // Теперь эта панель встанет идеально вплотную к краям внешнего окна
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
         ImGui::BeginChild("FakeTitleBarVisual", ImVec2(0, TITLE_BAR_HEIGHT), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
 
-            ImGui::SetCursorPosY(10);
             ImGui::Text("Lexeme Counter");
 
             ImGui::SameLine(ImGui::GetWindowWidth() - CLOSE_BUTTON_WIDTH);
             ImGui::SetCursorPosY(0);
 
             // Стиль кнопки закрытия
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(200.0/255.0f, 30.0/255.0f, 30.0/255.0f, 1.0f));
-                    if (ImGui::Button("x", ImVec2(TITLE_BAR_HEIGHT, CLOSE_BUTTON_WIDTH))) {
-                        break;
-                    }
-                ImGui::PopStyleColor();
+            ImGui::PushStyleColor(ImGuiCol_Button, BASIC_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, CLOSE_BUTTON_ACTIVE_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, CLOSE_BUTTON_HOVERED_COLOR);
+                if (ImGui::Button("x", ImVec2(CLOSE_BUTTON_WIDTH, TITLE_BAR_HEIGHT))) {
+                    break;
+                }
+            ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
             ImGui::PopStyleColor();
 
         ImGui::EndChild();
+
+        ImGui::PopStyleVar();
         ImGui::PopStyleVar();
         ImGui::PopStyleColor();
 
-        // 2. ОБЯЗАТЕЛЬНО возвращаем дефолтные отступы назад,
-        // чтобы остальной контент приложения не прилипал к краям экрана!
         ImGui::PopStyleVar();
 
         // ====================================================================
         // КОНТЕНТ (Ниже плашки)
         // ====================================================================
 
+        ImGui::SetCursorPosY(TITLE_BAR_HEIGHT);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
-        ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_AlwaysUseWindowPadding);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
+        ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
 
             static string dir_path = "";
             static string input_buffer = "";
 
-            ImGui::InputText("##dir_path_unput", &input_buffer);
+            // Поле ввода
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR_HIGHLIGHTED);
+                ImGui::SetNextItemWidth(-INPUT_BUTTON_WIDTH);
+                ImGui::PushStyleColor(ImGuiCol_TextDisabled, BASIC_COLOR_ACTIVATED);
+                    if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к дирректории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
+                        dir_path = input_buffer;
+                    }
+                ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
 
+
+            // Кнопка ввода
             ImGui::SameLine();
-
-            if (ImGui::Button("Ввод")) {
+            if (ImGui::Button("Ввод", ImVec2(INPUT_BUTTON_WIDTH, 0))) {
                 dir_path = input_buffer;
             }
 
             ImGui::Text("Введённый текст: %s", dir_path.c_str());
         ImGui::EndChild();
+        ImGui::PopStyleColor();
         ImGui::PopStyleVar();
 
-
         ImGui::End();
+
         rlImGuiEnd();
         EndDrawing();
 
