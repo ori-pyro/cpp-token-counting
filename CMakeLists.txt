@@ -61,11 +61,17 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(re2)
 
-# Main executable (excluding framework.cpp)
+# Main executable
 file(GLOB SOURCES "*.cpp")
-list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/framework.cpp")
-add_executable(token_counter ${SOURCES})
+add_executable(
+    token_counter ${SOURCES}
+)
+target_include_directories(token_counter PRIVATE
+    ${imgui_SOURCE_DIR}
+    ${rlimgui_SOURCE_DIR}
+)
 target_link_libraries(token_counter PRIVATE
+    rlimgui_lib
     imgui
     re2::re2
     raylib
@@ -73,7 +79,11 @@ target_link_libraries(token_counter PRIVATE
 
 # Separate executable for framework with ImGui
 # add_executable(framework WIN32 framework.cpp)
-add_executable(framework framework.cpp)
+add_executable(framework main.cpp framework.cpp)
+target_include_directories(framework PRIVATE
+    ${imgui_SOURCE_DIR}
+    ${rlimgui_SOURCE_DIR}
+)
 target_link_libraries(framework PRIVATE
     rlimgui_lib
     imgui
