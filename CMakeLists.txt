@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 
 project(cpp_token_counting CXX)
 
@@ -7,6 +7,20 @@ set(CMAKE_CXX_STANDARD 23)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
+
+# Fetch pfd
+add_library(portable-file-dialogs INTERFACE)
+FetchContent_Declare(
+    portable-file-dialogs
+    GIT_REPOSITORY https://github.com/samhocevar/portable-file-dialogs.git
+    GIT_TAG        0.1.0
+    SOURCE_SUBDIR  "IGNORE_INTERNAL_CMAKE"
+)
+FetchContent_MakeAvailable(portable-file-dialogs)
+
+target_include_directories(portable-file-dialogs INTERFACE
+    ${portable-file-dialogs_SOURCE_DIR}
+)
 
 # Fetch raylib
 FetchContent_Declare(
@@ -75,17 +89,5 @@ target_link_libraries(token_counter PRIVATE
     imgui
     re2::re2
     raylib
-)
-
-# Separate executable for framework with ImGui
-# add_executable(framework WIN32 framework.cpp)
-add_executable(framework main.cpp framework.cpp)
-target_include_directories(framework PRIVATE
-    ${imgui_SOURCE_DIR}
-    ${rlimgui_SOURCE_DIR}
-)
-target_link_libraries(framework PRIVATE
-    rlimgui_lib
-    imgui
-    raylib
+    portable-file-dialogs
 )

@@ -42,8 +42,7 @@ public:
 
     std::vector<std::string> token_names;
     std::vector<int> token_count;
-
-
+    bool save_dialog_opened = false;
 
     Framework();
     ~Framework();
@@ -57,5 +56,6 @@ public:
     void draw_input_field();
     void move_by_drag_titlebar();
     void draw_table();
+    void save_button();
     void set_table(const std::vector<std::string>&, const std::vector<int>&);
 };

@@ -3,10 +3,10 @@
 #include "rlImGui.h"                // Мостик между RayLib и ImGui
 #include "JetBrainsMono.h"          // Подключаем шрифт
 #include <misc/cpp/imgui_stdlib.h>  // Работа с std::string в ImGui
+#include "save_dialog.h"
 #include "framework.h"
-#include <map>
-using namespace std;
 
+using namespace std;
 
 Framework::Framework() {
         SetConfigFlags(FLAG_WINDOW_UNDECORATED);        // Настройки внешнего окна Raylib (без рамок)
@@ -110,6 +110,7 @@ void Framework::draw_GUI() {
         }
         else if (work_state == SHOW_TABLE) {
             draw_table();
+            save_button();
         }
     ImGui::EndChild();
     ImGui::PopStyleColor();
@@ -215,23 +216,19 @@ void Framework::draw_table() {
     {
         ImGui::TableSetupColumn("Token");
         ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-
-
         for (int i = 0; i < token_names.size(); i++) {
             ImGui::TableNextColumn(); ImGui::Text(token_names[i].c_str());
             ImGui::TableNextColumn(); ImGui::Text(std::to_string(token_count[i]).c_str());
         }
-
-
         ImGui::EndTable();
     }
-
-
 }
+
 void Framework::set_table(const std::vector<std::string>& string_column, const std::vector<int>& int_column) {
     token_names = string_column;
     token_count = int_column;
 }
+
 void Framework::move_by_drag_titlebar() {
 
     titleBarRect.width = (float)GetScreenWidth();
@@ -258,5 +255,15 @@ void Framework::move_by_drag_titlebar() {
         } else {
             isDragging = false; // Отпустили мышь — закончили движение
         }
+    }
+}
+
+void Framework::save_button() {
+    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-55.0f));
+    if (ImGui::Button("Сохранить", ImVec2(130, 40))) {
+        open_save_dialog();
+    }
+    if (save_dialog) {
+        save_dialog_update(token_names, token_count);
     }
 }
