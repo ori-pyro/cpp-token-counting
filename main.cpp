@@ -13,6 +13,11 @@ int main() {
 
     Framework GUI;
 
+    // Создать объект regexp
+
+    // Создать вектор nonmatched
+    // Создать вектор matched
+
     vector<string> token_names = {
         "identifier",
         "keyword",
@@ -84,8 +89,25 @@ int main() {
                     fstream file(entry.path(), ios::in);        // Создаём объект файла и открываем для чтения
 
                     stringstream buffer;
-                    buffer << file.rdbuf();                     // TODO Сделать убирание пробелов через оператор << и цикл while
-                    string code = buffer.str();                 // Весь код в одну строку
+                    buffer << file.rdbuf();
+
+                    string line;
+                    string code_without_preprocessoring;
+                    while (getline(buffer, line)) {
+                        if (line[0] == '#') {
+                            continue;
+                        }
+
+                        // Убираем пробелы, табуляцию и тд.
+                        stringstream ss(line);
+                        while (ss) {
+                            ss >> code_without_preprocessoring;
+                        }
+
+                        // Получить mathed и nonmatched
+
+                        // Обработать и посчитать токены
+                    }
                 }
             }
 
