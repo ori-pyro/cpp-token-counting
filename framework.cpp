@@ -6,6 +6,8 @@
 #include "save_dialog.h"
 #include "framework.h"
 
+#include <iostream>
+
 using namespace std;
 
 Framework::Framework() {
@@ -104,13 +106,17 @@ void Framework::draw_GUI() {
     ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
         if (work_state == WAITING_INPUT) {
             draw_input_field();
+            if (!input_is_correct) {
+                draw_error_message();
+            }
         }
         else if (work_state == WORK_IN_PROGRESS) {
             draw_progress_bar();
-        }
+                    }
         else if (work_state == SHOW_TABLE) {
             draw_table();
             save_button();
+            back_button();
         }
     ImGui::EndChild();
     ImGui::PopStyleColor();
@@ -266,4 +272,20 @@ void Framework::save_button() {
     if (save_dialog) {
         save_dialog_update(token_names, token_count);
     }
+}
+
+void Framework::back_button() {
+    ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-55.0f));
+    if (ImGui::Button("Назад", ImVec2(130, 40))) {
+        work_state = WAITING_INPUT;
+        input_is_correct = true;
+    }
+}
+
+void Framework::incorrect_input() {
+    input_is_correct = false;
+}
+
+void Framework::draw_error_message() {
+    ImGui::Text(" Ошибка: Некорректный ввод");
 }

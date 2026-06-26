@@ -57,7 +57,7 @@ int main() {
             // Проверка корректности ввода
             if (!fs::exists(dir_path) || !fs::is_directory(dir_path)) {
                 GUI.work_state = WAITING_INPUT;
-                cout << "dir isn't exists" << '\n';
+                GUI.incorrect_input();
                 continue;
             } else {
                 GUI.work_state = WORK_IN_PROGRESS;
