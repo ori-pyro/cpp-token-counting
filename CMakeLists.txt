@@ -77,9 +77,7 @@ FetchContent_MakeAvailable(re2)
 
 # Main executable
 file(GLOB SOURCES "*.cpp")
-add_executable(
-    token_counter ${SOURCES}
-)
+add_executable(token_counter WIN32 ${SOURCES})
 target_include_directories(token_counter PRIVATE
     ${imgui_SOURCE_DIR}
     ${rlimgui_SOURCE_DIR}
