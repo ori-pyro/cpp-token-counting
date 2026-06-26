@@ -4,6 +4,7 @@
 #include "JetBrainsMono.h"          // Подключаем шрифт
 #include <misc/cpp/imgui_stdlib.h>  // Работа с std::string в ImGui
 #include "framework.h"
+#include <map>
 using namespace std;
 
 
@@ -54,6 +55,10 @@ Framework::Framework() {
 
         // СТИЛЬ РАМОК
         style.Colors[ImGuiCol_Border] = TITLEBAR_COLOR_ACTIVATED;
+        style.Colors[ImGuiCol_TableBorderLight] = TITLEBAR_COLOR_ACTIVATED;
+        style.Colors[ImGuiCol_TableBorderStrong] = TITLEBAR_COLOR_ACTIVATED;
+
+
 }
 
 void Framework::draw_GUI() {
@@ -102,6 +107,9 @@ void Framework::draw_GUI() {
         }
         else if (work_state == WORK_IN_PROGRESS) {
             draw_progress_bar();
+        }
+        else if (work_state == SHOW_TABLE) {
+            draw_table();
         }
     ImGui::EndChild();
     ImGui::PopStyleColor();
@@ -202,6 +210,28 @@ void Framework::draw_input_field() {
     }
 }
 
+void Framework::draw_table() {
+    if (ImGui::BeginTable("my_table", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+    {
+        ImGui::TableSetupColumn("Token");
+        ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+
+
+        for (int i = 0; i < token_names.size(); i++) {
+            ImGui::TableNextColumn(); ImGui::Text(token_names[i].c_str());
+            ImGui::TableNextColumn(); ImGui::Text(std::to_string(token_count[i]).c_str());
+        }
+
+
+        ImGui::EndTable();
+    }
+
+
+}
+void Framework::set_table(const std::vector<std::string>& string_column, const std::vector<int>& int_column) {
+    token_names = string_column;
+    token_count = int_column;
+}
 void Framework::move_by_drag_titlebar() {
 
     titleBarRect.width = (float)GetScreenWidth();

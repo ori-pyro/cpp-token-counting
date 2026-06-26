@@ -1,9 +1,10 @@
-#include "imgui.h"                  // Фреймворк
-#include "raylib.h"                 // Бэкенд для ImGui
+#include "imgui.h"      // Фреймворк
+#include "raylib.h"     // Бэкенд для ImGui
 #include <string>
+#include <vector>
 
 
-enum Work_state {WAITING_INPUT, JUST_INPUT, WORK_IN_PROGRESS, SHOULD_CLOSE};
+enum Work_state {WAITING_INPUT, JUST_INPUT, WORK_IN_PROGRESS, SHOULD_CLOSE, SHOW_TABLE};
 
 
 class Framework {
@@ -39,6 +40,11 @@ public:
     std::string progress_bar_text = "";
     float progress_bar_fraction;
 
+    std::vector<std::string> token_names;
+    std::vector<int> token_count;
+
+
+
     Framework();
     ~Framework();
 
@@ -50,5 +56,6 @@ public:
     void draw_titlebar();
     void draw_input_field();
     void move_by_drag_titlebar();
-
+    void draw_table();
+    void set_table(const std::vector<std::string>&, const std::vector<int>&);
 };
