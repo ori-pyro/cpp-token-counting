@@ -75,9 +75,11 @@ set(MAIN_SOURCES
     framework.h
     save_dialog.cpp
     save_dialog.h
+    parser.cpp
+    parser.h
 )
 
-add_executable(token_counter WIN32 ${MAIN_SOURCES})
+add_executable(token_counter ${MAIN_SOURCES})
 
 target_link_libraries(token_counter PRIVATE
     rlimgui_lib
