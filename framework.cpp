@@ -6,8 +6,6 @@
 #include "save_dialog.h"
 #include "framework.h"
 
-#include <iostream>
-
 using namespace std;
 
 Framework::Framework() {
@@ -144,7 +142,18 @@ void Framework::set_progress_bar(float value) {
 }
 
 void Framework::draw_progress_bar() {
-    ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 30), progress_bar_text.c_str());
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, TITLEBAR_COLOR_ACTIVATED);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, TITLEBAR_COLOR);
+    ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR);
+        ImVec2 cursor_pos_before_progress_bar = ImGui::GetCursorPos();
+        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 30), "");
+
+        cursor_pos_before_progress_bar.y += 3;
+        ImGui::SetCursorPos(cursor_pos_before_progress_bar);
+        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 30));
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
 }
 
 void Framework::draw_titlebar() {
@@ -201,7 +210,7 @@ void Framework::draw_input_field() {
     // Поле ввода
     ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR_HIGHLIGHTED);
         ImGui::SetNextItemWidth(-INPUT_BUTTON_WIDTH);
-        ImGui::PushStyleColor(ImGuiCol_TextDisabled, BASIC_COLOR_ACTIVATED);
+        ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
             if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к дирректории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
                 dir_path = input_buffer;
                 work_state = JUST_INPUT;

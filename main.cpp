@@ -86,6 +86,19 @@ int main() {
                     stringstream buffer;
                     buffer << file.rdbuf();                     // TODO Сделать убирание пробелов через оператор << и цикл while
                     string code = buffer.str();                 // Весь код в одну строку
+
+                    // string line;
+                    // string code_without_preprocessoring;
+                    // while (getline(buffer, line)) {
+                    //     if (line[0] == '#') {
+                    //         continue;
+                    //     }
+
+
+                    //     // Получить mathed и nonmatched
+
+                    //     // Обработать и посчитать токены
+                    // }
                 }
             }
 
