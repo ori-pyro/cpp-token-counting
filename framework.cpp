@@ -232,8 +232,15 @@ void Framework::draw_table() {
         ImGui::TableSetupColumn("Token");
         ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         for (int i = 0; i < token_names.size(); i++) {
-            ImGui::TableNextColumn(); ImGui::Text(token_names[i].c_str());
-            ImGui::TableNextColumn(); ImGui::Text(std::to_string(token_count[i]).c_str());
+            // Уникальный айди для каждой ячейки, чтобы ImGui различал их
+            std::string label1 = "##cell_1" + std::to_string(i);
+            std::string label2 = "##cell_2" + std::to_string(i);
+
+            std::string count_str = std::to_string(token_count[i]);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, TRANSPERENT);
+                ImGui::TableNextColumn(); ImGui::InputText(label1.c_str(), &token_names[i][0], token_names[i].size() + 1, ImGuiInputTextFlags_ReadOnly);
+                ImGui::TableNextColumn(); ImGui::InputText(label2.c_str(), &count_str, ImGuiInputTextFlags_ReadOnly);
+            ImGui::PopStyleColor();
         }
         ImGui::EndTable();
     }

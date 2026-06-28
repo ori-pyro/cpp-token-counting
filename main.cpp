@@ -1,9 +1,9 @@
 #include <iostream>
 #include <fstream>      // Чтение файлов
-#include <re2/re2.h>    // Регулярки
 #include <filesystem>
 #include <vector>
 #include "framework.h"
+#include "parser.h"
 
 using namespace std;
 namespace fs = filesystem;
@@ -12,18 +12,24 @@ namespace fs = filesystem;
 int main() {
 
     Framework GUI;
+    Parser parser;
+
+    // Создать объект regexp
+
+    // Создать вектор nonmatched
+    // Создать вектор matched
 
     vector<string> token_names = {
         "identifier",
         "keyword",
-        "   integer-literal",
-        "   character-literal",
-        "   floating-point-literal",
-        "   string-literal",
-        "   boolean-literal",
-        "   pointer-literal",
-        "   user-defined-literal",
-        "header-name",
+        "integer-literal",
+        "character-literal",
+        "floating-point-literal",
+        "string-literal",
+        "boolean-literal",
+        "pointer-literal",
+        "user-defined-literal",
+        // "header-name",
         "operator-or-punctuator"
     };
     vector<int> token_count = {
@@ -36,7 +42,7 @@ int main() {
         0,
         0,
         0,
-        0,
+        // 0,
         0
     };
 
@@ -87,22 +93,23 @@ int main() {
                     buffer << file.rdbuf();                     // TODO Сделать убирание пробелов через оператор << и цикл while
                     string code = buffer.str();                 // Весь код в одну строку
 
-                    // string line;
-                    // string code_without_preprocessoring;
-                    // while (getline(buffer, line)) {
-                    //     if (line[0] == '#') {
-                    //         continue;
-                    //     }
-
-
-                    //     // Получить mathed и nonmatched
-
-                    //     // Обработать и посчитать токены
-                    // }
+                    string line;
+                    string code_without_preprocessoring;
+                    while (getline(buffer, line)) {
+                        if (line[0] == '#') {
+                            continue;
+                        }
+                        code_without_preprocessoring += line;
+                    }
+                    parser.parser(code_without_preprocessoring);
                 }
             }
 
-            parser.clear_table(); // Очищаем таблицу на случай, если пользователь нажмёт НАЗАД
+            for (int i = 0; i < token_names.size(); i++) {
+                token_count[i] = parser.tokens[token_names[i]];
+            }
+
+            parser.clear_table();
 
             GUI.set_table(token_names, token_count);
             GUI.work_state = SHOW_TABLE;
