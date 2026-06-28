@@ -31,12 +31,12 @@ public:
         {"header-name", 0},
         {"operator-or-punctuator", 0}
     };
-    RE2 separators = RE2(R"((>>=|<<=|>>|<<|&&|\|\||\+\+|//|/\*|--|<=>|>=|<=|==|\+=|-=|\*=|/=|%=|^=|&=|\|=|!=|<%|%>|<:|:>|\.\.\.|::|\.\*|->|->\*|\^\^|[][(){};:?~!*/%\^&|=<>,.+\-]))");
-    RE2 float_exp = RE2(R"(\d*\.\d*[eE]?[-+]?\d*[fF]?)");
-    RE2 string_consume = RE2(R"("([^"\\]|\\.)*")");
+    RE2 separators = RE2(R"((>>=|<<=|>>|<<|&&|\|\||\+\+|//|/\*|--|<=>|>=|<=|==|\+=|-=|\*=|/=|%=|^=|&=|\|=|!=|<%|%>|<:|:>|\.\.\.|::|\.\*|->|->\*|\^\^|[][(){};:?~!*/%\^&|=<>,.+\-#]|\s+))");
+    RE2 float_exp = RE2(R"((\d*\.\d*[eE]?[-+]?\d*[fF]?))");
+    RE2 string_consume = RE2(R"("(([^"\\]|\\.)*"))");
+    RE2 raw_string_begin = RE2(R"(R"([^(]*)\()");
     RE2 character_consume = RE2(R"('([^'\\]|\\.)*')");
-    RE2 comment = RE2(R"(\n)");
-    RE2 whitespace_pattern = RE2(R"(\s+)");
+    RE2 end_of_line = RE2(R"(\n)");
     RE2 multy_comment = RE2(R"(\*/)"); // многострочный
 
     re2::StringPiece rest;
@@ -48,9 +48,11 @@ public:
 
     void string_analyze();
 
+    void raw_string_analyze();
+
     void character_analyze();
 
-    void skip_comment();
+    void skip_to_end_of_line();
 
     void skip_multy_comment();
 
