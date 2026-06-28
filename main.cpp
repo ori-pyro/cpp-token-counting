@@ -102,6 +102,8 @@ int main() {
                 }
             }
 
+            parser.clear_table(); // Очищаем таблицу на случай, если пользователь нажмёт НАЗАД
+
             GUI.set_table(token_names, token_count);
             GUI.work_state = SHOW_TABLE;
         }
