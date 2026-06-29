@@ -53,7 +53,7 @@ public:
     ~Framework();
 
     std::string get_input();
-    void draw_GUI();
+    void update();
     void text_input();
     void set_progress_bar(float);
     void draw_progress_bar();

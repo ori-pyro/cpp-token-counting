@@ -2,49 +2,99 @@
 #include <fstream>      // Чтение файлов
 #include <filesystem>
 #include <vector>
+#include <thread>
+#include <atomic>
 #include "framework.h"
 #include "parser.h"
 
 using namespace std;
 namespace fs = filesystem;
 
+atomic<Work_state> work_state_atomic{ WAITING_INPUT };
+
+atomic<float> progress_bar_fraction_atomic{ 0.0f };
+
+char shared_file_name_buffer[512] = {0};
+atomic<bool> file_name_updated{ false };
+
+vector<string> global_token_names = {
+    "identifier",
+    "keyword",
+    "integer-literal",
+    "character-literal",
+    "floating-point-literal",
+    "string-literal",
+    "boolean-literal",
+    "pointer-literal",
+    "user-defined-literal",
+    // "header-name",
+    "operator-or-punctuator"
+};
+vector<int> global_token_count = {
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    // 0,
+    0
+};
+
+
+void token_counting(std::string dir_path) {
+
+    Parser parser;
+
+    // Подсчёт общего количества файлов для прогрессбара
+    int count_of_files = 0;
+    int curr_file_number = 0;
+    for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
+        if (entry.path().extension() == ".cpp") {
+            count_of_files++;
+        }
+    }
+
+    // Проход по всем файлам
+    for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
+        if (entry.path().extension() == ".cpp") {
+            curr_file_number++;
+
+            // передаём atomic заполненность прогрессбара в gui
+            progress_bar_fraction_atomic = static_cast<float>(curr_file_number)/count_of_files;
+
+            // передаём atomic имя файла в gui
+            std::string file_name = entry.path().filename().string();
+            size_t copy_size = std::min(file_name.size(), sizeof(shared_file_name_buffer) - 1);
+            memcpy(shared_file_name_buffer, file_name.data(), copy_size);
+            shared_file_name_buffer[copy_size] = '\0'; // Строка обязана заканчиваться нулем
+            file_name_updated = true;
+
+            fstream file(entry.path(), ios::in);        // Создаём объект файла и открываем для чтения
+            if (file.is_open()) {
+                stringstream buffer;
+                buffer << file.rdbuf();
+                string code = buffer.str(); // Весь код в одну строку
+                parser.parser(code);
+            }
+        }
+    }
+    // загрузка в таблицу
+    for (int i = 0; i < global_token_names.size(); i++) {
+        global_token_count[i] = parser.tokens[global_token_names[i]];
+    }
+    parser.clear_table();
+
+    work_state_atomic = SHOW_TABLE;
+}
 
 int main() {
 
     Framework GUI;
-    Parser parser;
-
-    // Создать объект regexp
-
-    // Создать вектор nonmatched
-    // Создать вектор matched
-
-    vector<string> token_names = {
-        "identifier",
-        "keyword",
-        "integer-literal",
-        "character-literal",
-        "floating-point-literal",
-        "string-literal",
-        "boolean-literal",
-        "pointer-literal",
-        "user-defined-literal",
-        // "header-name",
-        "operator-or-punctuator"
-    };
-    vector<int> token_count = {
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        // 0,
-        0
-    };
+    fs::path dir_path;
 
     while (!WindowShouldClose()) {
 
@@ -52,13 +102,13 @@ int main() {
         if (GUI.work_state == SHOULD_CLOSE) {
             return 0;
         } else {
-            GUI.draw_GUI();
+            GUI.update();
         }
 
 
         // Запускается после того как пользователь нажал ВВОД
         if (GUI.work_state == JUST_INPUT) {
-            fs::path dir_path = GUI.get_input();
+            dir_path = GUI.get_input();
 
             // Проверка корректности ввода
             if (!fs::exists(dir_path) || !fs::is_directory(dir_path)) {
@@ -66,53 +116,25 @@ int main() {
                 GUI.incorrect_input();
                 continue;
             } else {
+                std::thread analyzer(token_counting, dir_path.string());
+                analyzer.detach();
                 GUI.work_state = WORK_IN_PROGRESS;
             }
+        }
 
-            // Подсчёт общего количества файлов для прогрессбара
-            int count_of_files = 0;
-            int curr_file_number = 0;
-            for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-                if (entry.path().extension() == ".cpp") {
-                    count_of_files++;
-                }
+
+        if (GUI.work_state == WORK_IN_PROGRESS) {
+            GUI.progress_bar_fraction = progress_bar_fraction_atomic.load();
+            GUI.progress_bar_text = std::string(shared_file_name_buffer);
+            file_name_updated = false;
+
+            // Если паралельный алгоритм завершил работу
+            if (work_state_atomic == SHOW_TABLE) {
+                GUI.work_state = SHOW_TABLE;
+                GUI.set_table(global_token_names, global_token_count);
+
+                work_state_atomic = WAITING_INPUT; // Если пользователь нажмёт ОТМЕНА
             }
-
-            // Проход по всем файлам
-            for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-                if (entry.path().extension() == ".cpp") {
-
-                    GUI.progress_bar_text = entry.path().filename().string(); // Название текущего обрабатываемого файла
-                    GUI.progress_bar_fraction = static_cast<float>(curr_file_number)/count_of_files; // Состояние прогрессбара
-                    GUI.draw_GUI(); // Рисуем перед обработкой файла
-
-                    curr_file_number++;
-                    fstream file(entry.path(), ios::in);        // Создаём объект файла и открываем для чтения
-
-                    stringstream buffer;
-                    buffer << file.rdbuf();                     // TODO Сделать убирание пробелов через оператор << и цикл while
-                    string code = buffer.str();                 // Весь код в одну строку
-
-                    string line;
-                    string code_without_preprocessoring;
-                    while (getline(buffer, line)) {
-                        if (line[0] == '#') {
-                            continue;
-                        }
-                        code_without_preprocessoring += line;
-                    }
-                    parser.parser(code_without_preprocessoring);
-                }
-            }
-
-            for (int i = 0; i < token_names.size(); i++) {
-                token_count[i] = parser.tokens[token_names[i]];
-            }
-
-            parser.clear_table();
-
-            GUI.set_table(token_names, token_count);
-            GUI.work_state = SHOW_TABLE;
         }
     }
 

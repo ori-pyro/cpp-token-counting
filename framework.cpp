@@ -61,7 +61,7 @@ Framework::Framework() {
 
 }
 
-void Framework::draw_GUI() {
+void Framework::update() {
     move_by_drag_titlebar();
 
     BeginDrawing();
@@ -230,7 +230,7 @@ void Framework::draw_table() {
     if (ImGui::BeginTable("my_table", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
     {
         ImGui::TableSetupColumn("Token");
-        ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+        ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 160.0f);
         for (int i = 0; i < token_names.size(); i++) {
             // Уникальный айди для каждой ячейки, чтобы ImGui различал их
             std::string label1 = "##cell_1" + std::to_string(i);
