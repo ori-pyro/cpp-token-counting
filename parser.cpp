@@ -152,6 +152,12 @@ void Parser::skip_multy_comment() {
     RE2::FindAndConsume(&rest, multy_comment);
 }
 
+void Parser::clear_table() {
+    for (auto& [key, value] : tokens) {
+        value = 0;
+    }
+}
+
 bool Parser::is_user_defined_literal() {
     // TODO
     return false;

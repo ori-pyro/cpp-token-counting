@@ -57,4 +57,6 @@ public:
     void skip_multy_comment();
 
     bool is_user_defined_literal();
+
+    void clear_table();
 };

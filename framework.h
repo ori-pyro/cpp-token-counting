@@ -25,6 +25,8 @@ public:
     const ImVec4 CLOSE_BUTTON_HOVERED_COLOR = ImVec4(0.8f, 0.12f, 0.12f, 1.0f);
     const ImVec4 CLOSE_BUTTON_ACTIVE_COLOR = ImVec4(0.6f, 0.12f, 0.12f, 1.0f);
     const ImVec4 TEXT_COLOR = ImVec4(184.0/255.0f, 192/255.0f, 224/255.0f, 1.0f);
+    const ImVec4 TRANSPERENT = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+
 
 
     ImFont* regular_font = nullptr;
@@ -51,7 +53,7 @@ public:
     ~Framework();
 
     std::string get_input();
-    void draw_GUI();
+    void update();
     void text_input();
     void set_progress_bar(float);
     void draw_progress_bar();
