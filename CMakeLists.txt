@@ -61,11 +61,11 @@ add_library(imgui STATIC
     "${imgui_SOURCE_DIR}/imgui_tables.cpp"
     "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
     "${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
-)
+ )
 target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}" "${imgui_SOURCE_DIR}/backends")
 target_link_libraries(imgui PUBLIC raylib)
 
-add_library(rlimgui_lib STATIC "${rlimgui_SOURCE_DIR}/rlImGui.cpp")
+add_library(rlimgui_lib STATIC "${rlimgui_SOURCE_DIR}/rlImGui.cpp" )
 target_include_directories(rlimgui_lib PUBLIC "${rlimgui_SOURCE_DIR}" "${imgui_SOURCE_DIR}")
 target_link_libraries(rlimgui_lib PUBLIC raylib imgui)
 
@@ -79,7 +79,7 @@ set(MAIN_SOURCES
     parser.h
 )
 
-add_executable(token_counter ${MAIN_SOURCES})
+add_executable(token_counter ${MAIN_SOURCES} )
 
 target_link_libraries(token_counter PRIVATE
     rlimgui_lib

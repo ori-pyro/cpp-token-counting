@@ -70,3 +70,4 @@ Testing/
 
 # hide IDE settings
 .zed/
+.vs/

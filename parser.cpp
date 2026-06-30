@@ -105,6 +105,7 @@ void Parser::digit_analyze() {
             tokens["floating-point-literal"]++;
         }
     } else {
+        RE2::Consume(&rest, int_skip);
         if (!is_user_defined_literal()) {
             tokens["integer-literal"]++;
         }
@@ -159,6 +160,9 @@ void Parser::clear_table() {
 }
 
 bool Parser::is_user_defined_literal() {
-    // TODO
+    if (rest.starts_with('_')) {
+        tokens["user-defined-literal"]++;
+        return true;
+    }
     return false;
 }
