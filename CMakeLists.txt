@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(cpp_token_counting CXX)
+project(cpp_token_counting CXX C)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23)
@@ -8,9 +8,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build libraries statically" FORCE)
 set(RE2_BUILD_TESTING OFF CACHE BOOL "Disable RE2 testing" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries" FORCE)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
+
+# Готовый парсер для сравнения
+FetchContent_Declare(
+    tree-sitter
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
+    GIT_TAG        v0.25.2
+)
+FetchContent_Declare(
+    tree-sitter-cpp
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-cpp.git
+    GIT_TAG        v0.23.4
+)
 
 FetchContent_Declare(
     portable-file-dialogs
@@ -51,6 +64,22 @@ FetchContent_MakeAvailable(
     re2
 )
 
+FetchContent_Populate(tree-sitter)
+FetchContent_Populate(tree-sitter-cpp)
+
+add_library(tree-sitter STATIC "${tree-sitter_SOURCE_DIR}/lib/src/lib.c")
+target_include_directories(tree-sitter PUBLIC
+    "${tree-sitter_SOURCE_DIR}/lib/include"
+    "${tree-sitter_SOURCE_DIR}/lib/src"
+)
+
+add_library(tree-sitter-cpp STATIC
+    "${tree-sitter-cpp_SOURCE_DIR}/src/parser.c"
+    "${tree-sitter-cpp_SOURCE_DIR}/src/scanner.c"
+)
+target_include_directories(tree-sitter-cpp PUBLIC "${tree-sitter-cpp_SOURCE_DIR}/src")
+target_link_libraries(tree-sitter-cpp PRIVATE tree-sitter)
+
 add_library(portable-file-dialogs INTERFACE)
 target_include_directories(portable-file-dialogs INTERFACE "${portable-file-dialogs_SOURCE_DIR}")
 
@@ -87,4 +116,22 @@ target_link_libraries(token_counter PRIVATE
     re2::re2
     raylib
     portable-file-dialogs
+)
+
+# делаем доступными пути к библотекам
+include_directories("${tree-sitter_SOURCE_DIR}/lib/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+
+set(TESTER_SOURCES
+    test/tester.cpp
+    parser.cpp
+    parser.h
+)
+
+add_executable(tester ${TESTER_SOURCES})
+
+target_link_libraries(tester PRIVATE
+    re2::re2
+    tree-sitter-cpp
+    tree-sitter
 )
