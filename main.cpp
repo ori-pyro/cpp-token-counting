@@ -111,7 +111,7 @@ int main() {
             dir_path = GUI.get_input();
 
             // Проверка корректности ввода
-            if (!fs::exists(dir_path) || !fs::is_directory(dir_path)) {
+            if (!fs::exists(dir_path) || !(fs::is_directory(dir_path) || fs::is_regular_file(dir_path))) {
                 GUI.work_state = WAITING_INPUT;
                 GUI.incorrect_input();
                 continue;

@@ -34,6 +34,7 @@ void Parser::parser(std::string& text) {
                 tokens["operator-or-punctuator"]++;
             }
             else if (!token.empty()) { // Если два сепаратора стоят в притык то получим пустой токен
+                // std::cout << token << '\n';
                 tokens["identifier"]++;
             }
         }
