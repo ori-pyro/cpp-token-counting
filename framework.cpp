@@ -10,7 +10,7 @@ using namespace std;
 
 Framework::Framework() {
         SetConfigFlags(FLAG_WINDOW_UNDECORATED);        // Настройки внешнего окна Raylib (без рамок)
-        InitWindow(WIDTH, HEIGHT, "Lexeme Counter");
+        InitWindow(WIDTH, HEIGHT, "Token Counter");
         SetTargetFPS(60);
 
         rlImGuiSetup(true); // Иниициализация ImGui и интеграция с RayLib
@@ -165,7 +165,7 @@ void Framework::draw_titlebar() {
 
         // Заголовок тайтлбара
         ImGui::PushFont(regular_font, 20.0f);
-            ImGui::Text("Lexeme Counter");
+            ImGui::Text("Token Counter");
         ImGui::PopFont();
 
         ImGui::SameLine(ImGui::GetWindowWidth() - CLOSE_BUTTON_WIDTH);
