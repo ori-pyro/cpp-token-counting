@@ -7,7 +7,7 @@
 struct Table_row_expandable {
     std::string type = "";
     int cnt = 0;
-    bool is_expanded;
+    bool is_expanded = false;
     std::vector<std::string> sub_types;
     std::vector<int> sub_count;
 };
