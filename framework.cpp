@@ -8,6 +8,7 @@
 
 #include <iostream>
 
+
 using namespace std;
 
 Framework::Framework() {
@@ -234,20 +235,20 @@ void Framework::draw_table() {
         ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 30.0f); // Колонка для кнопки раскрытия
         ImGui::TableSetupColumn("Token");
         ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 160.0f);
-        int i = 0;
-        for (auto& [type, cnt] : types) {
+        for (int i = 0; i < table.expandable_rows.size(); i++) {
+            Table_row_expandable& row = table.expandable_rows[i];
             ImGui::TableNextRow(0, 30.0f); // Высота строки
 
             // Рисуем кнопку в первой колонке
             ImGui::TableNextColumn();
             ImGui::PushID(i);
 
-            if (sub_types.contains(type)) {
+            if (!table.expandable_rows[i].sub_types.empty()) {
                 ImGui::PushStyleColor(ImGuiCol_Button, TRANSPERENT);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SEMI_TRANSPERENT);
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, LIGTHER_TRANSPERENT);
-                    if (ImGui::Button(type_is_expanded[type] ? "-" : "+", ImVec2(30.0f, 30.0f))) {
-                        type_is_expanded[type] = !type_is_expanded[type];
+                    if (ImGui::Button(row.is_expanded ? "-" : "+", ImVec2(30.0f, 30.0f))) {
+                        row.is_expanded = !row.is_expanded;
                     }
                 ImGui::PopStyleColor();
                 ImGui::PopStyleColor();
@@ -255,8 +256,8 @@ void Framework::draw_table() {
             }
 
 
-            std::string count_str = std::to_string(cnt);
-            std::string type_cpy = std::string(type);
+            std::string count_str = std::to_string(row.cnt);
+            std::string type_cpy = std::string(row.type);
 
             ImGui::TableNextColumn();
             ImGui::InputText("##token", &type_cpy, ImGuiInputTextFlags_ReadOnly);
@@ -264,15 +265,14 @@ void Framework::draw_table() {
             ImGui::TableNextColumn();
             ImGui::InputText("##count", &count_str, ImGuiInputTextFlags_ReadOnly);
 
-            if (type_is_expanded[type]) {
-                int j = 0; // для ID
-                for (const auto& [sub_type, sub_cnt] : sub_types[type]) {
+            if (row.is_expanded) {
+                for (int j = 0; j < row.sub_types.size(); j++) {
                     ImGui::PushID(j);
                     ImGui::TableNextRow(0, 30.0f); // Высота строки
 
                     ImGui::TableNextColumn(); // скип колонки с кнопкой
-                    std::string count_str = std::to_string(sub_cnt);
-                    std::string sub_type_cpy = sub_type;
+                    std::string count_str = std::to_string(row.sub_count[j]);
+                    std::string sub_type_cpy = row.sub_types[j];
 
                     ImGui::TableNextColumn();
                     ImGui::SameLine(0.0f, 30.0f); // сдвиг
@@ -282,11 +282,9 @@ void Framework::draw_table() {
                     ImGui::InputText("##sub_count", &count_str, ImGuiInputTextFlags_ReadOnly);
 
                     ImGui::PopID();
-                    j++;
                 }
             }
             ImGui::PopID();
-            i++;
         }
         ImGui::EndTable();
     }
@@ -299,6 +297,16 @@ void Framework::set_table(
 {
     types = types_new;
     sub_types = sub_types_new;
+    for (auto& [type, cnt] : types) {
+        Table_row_expandable row;
+        row.type = type;
+        row.cnt = cnt;
+        for (auto& [sub_type, sub_cnt] : sub_types.at(type)) {
+            row.sub_types.push_back(sub_type);
+            row.sub_count.push_back(sub_cnt);
+        }
+        table.expandable_rows.push_back(row);
+    }
 }
 
 void Framework::move_by_drag_titlebar() {

@@ -4,6 +4,19 @@
 #include <vector>
 #include <unordered_map>
 
+struct Table_row_expandable {
+    std::string type = "";
+    int cnt = 0;
+    bool is_expanded;
+    std::vector<std::string> sub_types;
+    std::vector<int> sub_count;
+};
+
+struct Table {
+    std::vector<Table_row_expandable> expandable_rows;
+};
+
+
 enum Work_state {WAITING_INPUT, JUST_INPUT, WORK_IN_PROGRESS, SHOULD_CLOSE, SHOW_TABLE};
 
 class Framework {
@@ -32,6 +45,7 @@ public:
     std::unordered_map<std::string, int> types;
     std::unordered_map<std::string, std::unordered_map<std::string, int>> sub_types;
 
+    Table table;
 
     ImFont* regular_font = nullptr;
     ImFont* small_font = nullptr;
