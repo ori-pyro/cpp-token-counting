@@ -6,6 +6,8 @@
 #include "save_dialog.h"
 #include "framework.h"
 
+#include <iostream>
+
 using namespace std;
 
 Framework::Framework() {
@@ -54,11 +56,10 @@ Framework::Framework() {
         style.Colors[ImGuiCol_ButtonActive]  = BASIC_COLOR_ACTIVATED;   // При нажатии
 
         // СТИЛЬ РАМОК
-        style.Colors[ImGuiCol_Border] = TITLEBAR_COLOR_ACTIVATED;
-        style.Colors[ImGuiCol_TableBorderLight] = TITLEBAR_COLOR_ACTIVATED;
-        style.Colors[ImGuiCol_TableBorderStrong] = TITLEBAR_COLOR_ACTIVATED;
-
-
+        style.Colors[ImGuiCol_FrameBg]              = TRANSPERENT;
+        style.Colors[ImGuiCol_Border]               = TITLEBAR_COLOR_ACTIVATED;
+        style.Colors[ImGuiCol_TableBorderLight]     = TITLEBAR_COLOR_ACTIVATED;
+        style.Colors[ImGuiCol_TableBorderStrong]    = TITLEBAR_COLOR_ACTIVATED;
 }
 
 void Framework::update() {
@@ -227,28 +228,77 @@ void Framework::draw_input_field() {
 }
 
 void Framework::draw_table() {
-    if (ImGui::BeginTable("my_table", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
+    if (ImGui::BeginTable("my_table", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
     {
+        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 30.0f); // Колонка для кнопки раскрытия
         ImGui::TableSetupColumn("Token");
         ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 160.0f);
-        for (int i = 0; i < token_names.size(); i++) {
-            // Уникальный айди для каждой ячейки, чтобы ImGui различал их
-            std::string label1 = "##cell_1" + std::to_string(i);
-            std::string label2 = "##cell_2" + std::to_string(i);
+        int i = 0;
+        for (auto& [type, cnt] : types) {
+            ImGui::TableNextRow(0, 30.0f); // Высота строки
 
-            std::string count_str = std::to_string(token_count[i]);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, TRANSPERENT);
-                ImGui::TableNextColumn(); ImGui::InputText(label1.c_str(), &token_names[i][0], token_names[i].size() + 1, ImGuiInputTextFlags_ReadOnly);
-                ImGui::TableNextColumn(); ImGui::InputText(label2.c_str(), &count_str, ImGuiInputTextFlags_ReadOnly);
-            ImGui::PopStyleColor();
+            // Рисуем кнопку в первой колонке
+            ImGui::TableNextColumn();
+            ImGui::PushID(i);
+
+            if (sub_types.contains(type)) {
+                ImGui::PushStyleColor(ImGuiCol_Button, TRANSPERENT);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SEMI_TRANSPERENT);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, LIGTHER_TRANSPERENT);
+                    if (ImGui::Button(type_is_expanded[type] ? "-" : "+", ImVec2(30.0f, 30.0f))) {
+                        type_is_expanded[type] = !type_is_expanded[type];
+                    }
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
+            }
+
+
+            std::string count_str = std::to_string(cnt);
+            std::string type_cpy = std::string(type);
+
+            ImGui::TableNextColumn();
+            ImGui::InputText("##token", &type_cpy, ImGuiInputTextFlags_ReadOnly);
+
+            ImGui::TableNextColumn();
+            ImGui::InputText("##count", &count_str, ImGuiInputTextFlags_ReadOnly);
+
+            if (type_is_expanded[type]) {
+                int j = 0; // для ID
+                for (const auto& [sub_type, sub_cnt] : sub_types[type]) {
+                    ImGui::PushID(j);
+                    ImGui::TableNextRow(0, 30.0f); // Высота строки
+
+                    ImGui::TableNextColumn(); // скип колонки с кнопкой
+                    std::string count_str = std::to_string(sub_cnt);
+                    std::string sub_type_cpy = sub_type;
+
+                    ImGui::TableNextColumn();
+                    ImGui::SameLine(0.0f, 30.0f); // сдвиг
+                    ImGui::InputText("##sub_token", &sub_type_cpy, ImGuiInputTextFlags_ReadOnly);
+
+                    ImGui::TableNextColumn();
+                    ImGui::InputText("##sub_count", &count_str, ImGuiInputTextFlags_ReadOnly);
+
+                    ImGui::PopID();
+                    j++;
+                }
+            }
+            ImGui::PopID();
+            i++;
         }
         ImGui::EndTable();
     }
+    ImGui::PopStyleVar();
 }
 
-void Framework::set_table(const std::vector<std::string>& string_column, const std::vector<int>& int_column) {
-    token_names = string_column;
-    token_count = int_column;
+void Framework::set_table(
+    const std::unordered_map<std::string, int>& types_new,
+    const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_types_new)
+{
+    types = types_new;
+    sub_types = sub_types_new;
 }
 
 void Framework::move_by_drag_titlebar() {
@@ -286,7 +336,7 @@ void Framework::save_button() {
         open_save_dialog();
     }
     if (save_dialog) {
-        save_dialog_update(token_names, token_count);
+        save_dialog_update(types, sub_types);
     }
 }
 

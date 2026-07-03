@@ -2,10 +2,9 @@
 #include "raylib.h"     // Бэкенд для ImGui
 #include <string>
 #include <vector>
-
+#include <unordered_map>
 
 enum Work_state {WAITING_INPUT, JUST_INPUT, WORK_IN_PROGRESS, SHOULD_CLOSE, SHOW_TABLE};
-
 
 class Framework {
 public:
@@ -26,7 +25,12 @@ public:
     const ImVec4 CLOSE_BUTTON_ACTIVE_COLOR = ImVec4(0.6f, 0.12f, 0.12f, 1.0f);
     const ImVec4 TEXT_COLOR = ImVec4(184.0/255.0f, 192/255.0f, 224/255.0f, 1.0f);
     const ImVec4 TRANSPERENT = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    const ImVec4 SEMI_TRANSPERENT = ImVec4(1.0f, 1.0f, 1.0f, 0.3f);
+    const ImVec4 LIGTHER_TRANSPERENT = ImVec4(1.0f, 1.0f, 1.0f, 0.6f);
 
+    std::unordered_map<std::string, bool> type_is_expanded;
+    std::unordered_map<std::string, int> types;
+    std::unordered_map<std::string, std::unordered_map<std::string, int>> sub_types;
 
 
     ImFont* regular_font = nullptr;
@@ -44,8 +48,6 @@ public:
     std::string progress_bar_text = "";
     float progress_bar_fraction;
 
-    std::vector<std::string> token_names;
-    std::vector<int> token_count;
     bool input_is_correct = true;
     bool save_dialog_opened = false;
 
@@ -65,5 +67,8 @@ public:
     void back_button();
     void incorrect_input();
     void draw_error_message();
-    void set_table(const std::vector<std::string>&, const std::vector<int>&);
+    void set_table(
+        const std::unordered_map<std::string, int>& type,
+        const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_type
+    );
 };
