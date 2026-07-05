@@ -10,7 +10,7 @@ using namespace std;
 
 Framework::Framework() {
         SetConfigFlags(FLAG_WINDOW_UNDECORATED);        // Настройки внешнего окна Raylib (без рамок)
-        InitWindow(WIDTH, HEIGHT, "Lexeme Counter");
+        InitWindow(WIDTH, HEIGHT, "Token Counter");
         SetTargetFPS(60);
 
         rlImGuiSetup(true); // Иниициализация ImGui и интеграция с RayLib
@@ -47,20 +47,20 @@ Framework::Framework() {
         isDragging = false;
         dragOffset = { 0, 0 }; // Координаты мыши относительно левого верхнего угла окна
 
-        // ГЛОБАЛЬНЫЕ НАСТРОЙКИ СТИЛЯ КНОПОК
         ImGuiStyle& style = ImGui::GetStyle();
+
+        // ГЛОБАЛЬНЫЕ НАСТРОЙКИ СТИЛЯ КНОПОК
         style.Colors[ImGuiCol_Button]        = BASIC_COLOR;             // Обычная
         style.Colors[ImGuiCol_ButtonHovered] = BASIC_COLOR_HIGHLIGHTED; // При наведении
         style.Colors[ImGuiCol_ButtonActive]  = BASIC_COLOR_ACTIVATED;   // При нажатии
 
         // СТИЛЬ РАМОК
-        style.Colors[ImGuiCol_Border] = TITLEBAR_COLOR_ACTIVATED;
-        style.Colors[ImGuiCol_TableBorderLight] = TITLEBAR_COLOR_ACTIVATED;
-        style.Colors[ImGuiCol_TableBorderStrong] = TITLEBAR_COLOR_ACTIVATED;
-
-
+        style.FramePadding = ImVec2(FRM_PDDNG, FRM_PDDNG);
+        style.Colors[ImGuiCol_FrameBg]              = TRANSPERENT;
+        style.Colors[ImGuiCol_Border]               = TITLEBAR_COLOR_ACTIVATED;
+        style.Colors[ImGuiCol_TableBorderLight]     = TITLEBAR_COLOR_ACTIVATED;
+        style.Colors[ImGuiCol_TableBorderStrong]    = TITLEBAR_COLOR_ACTIVATED;
 }
-
 void Framework::update() {
     move_by_drag_titlebar();
 
@@ -86,14 +86,11 @@ void Framework::update() {
                             ImGuiWindowFlags_NoCollapse |
                             ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(GetScreenWidth(), GetScreenHeight()), ImGuiCond_Always);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("MainPanel", nullptr, flags);
-
-
 
     draw_titlebar();
 
@@ -104,16 +101,27 @@ void Framework::update() {
     ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
         if (work_state == WAITING_INPUT) {
             draw_input_field();
-            if (!input_is_correct) {
-                draw_error_message();
-            }
+
+            // Кнопка Обзор
+            ImGui::SameLine();
+            observe_button();
+
+            // Сообщение об ошибке
+            if (!input_is_correct) { draw_error_message(); }
+
+            // Кнопка Далее
+            continue_button();
         }
         else if (work_state == WORK_IN_PROGRESS) {
             draw_progress_bar();
-                    }
+        }
         else if (work_state == SHOW_TABLE) {
             draw_table();
+
+            ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-55.0f));
             save_button();
+
+            ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-55.0f));
             back_button();
         }
     ImGui::EndChild();
@@ -125,35 +133,9 @@ void Framework::update() {
     rlImGuiEnd();
     EndDrawing();
 }
-
-void Framework::text_input() {} //TODO
-
 Framework::~Framework() {
     rlImGuiShutdown();
     CloseWindow();
-}
-
-string Framework::get_input() {
-    return dir_path;
-}
-
-void Framework::set_progress_bar(float value) {
-    progress_bar_fraction = value;
-}
-
-void Framework::draw_progress_bar() {
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, TITLEBAR_COLOR_ACTIVATED);
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, TITLEBAR_COLOR);
-    ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR);
-        ImVec2 cursor_pos_before_progress_bar = ImGui::GetCursorPos();
-        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 30), "");
-
-        cursor_pos_before_progress_bar.y += 3;
-        ImGui::SetCursorPos(cursor_pos_before_progress_bar);
-        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 30));
-    ImGui::PopStyleColor();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleColor();
 }
 
 void Framework::draw_titlebar() {
@@ -165,7 +147,7 @@ void Framework::draw_titlebar() {
 
         // Заголовок тайтлбара
         ImGui::PushFont(regular_font, 20.0f);
-            ImGui::Text("Lexeme Counter");
+            ImGui::Text("Token Counter");
         ImGui::PopFont();
 
         ImGui::SameLine(ImGui::GetWindowWidth() - CLOSE_BUTTON_WIDTH);
@@ -205,52 +187,6 @@ void Framework::draw_titlebar() {
 
     ImGui::PopStyleVar();
 }
-
-void Framework::draw_input_field() {
-    // Поле ввода
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR_HIGHLIGHTED);
-        ImGui::SetNextItemWidth(-INPUT_BUTTON_WIDTH);
-        ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
-            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к дирректории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
-                dir_path = input_buffer;
-                work_state = JUST_INPUT;
-            }
-        ImGui::PopStyleColor();
-    ImGui::PopStyleColor();
-
-    // Кнопка ввода
-    ImGui::SameLine();
-    if (ImGui::Button("Ввод", ImVec2(INPUT_BUTTON_WIDTH, 0))) {
-        dir_path = input_buffer;
-        work_state = JUST_INPUT;
-    }
-}
-
-void Framework::draw_table() {
-    if (ImGui::BeginTable("my_table", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
-    {
-        ImGui::TableSetupColumn("Token");
-        ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 160.0f);
-        for (int i = 0; i < token_names.size(); i++) {
-            // Уникальный айди для каждой ячейки, чтобы ImGui различал их
-            std::string label1 = "##cell_1" + std::to_string(i);
-            std::string label2 = "##cell_2" + std::to_string(i);
-
-            std::string count_str = std::to_string(token_count[i]);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, TRANSPERENT);
-                ImGui::TableNextColumn(); ImGui::InputText(label1.c_str(), &token_names[i][0], token_names[i].size() + 1, ImGuiInputTextFlags_ReadOnly);
-                ImGui::TableNextColumn(); ImGui::InputText(label2.c_str(), &count_str, ImGuiInputTextFlags_ReadOnly);
-            ImGui::PopStyleColor();
-        }
-        ImGui::EndTable();
-    }
-}
-
-void Framework::set_table(const std::vector<std::string>& string_column, const std::vector<int>& int_column) {
-    token_names = string_column;
-    token_count = int_column;
-}
-
 void Framework::move_by_drag_titlebar() {
 
     titleBarRect.width = (float)GetScreenWidth();
@@ -280,28 +216,169 @@ void Framework::move_by_drag_titlebar() {
     }
 }
 
+void Framework::draw_input_field() {
+    // Поле ввода
+    ImGui::GetStyle().FrameBorderSize = 1.8f;
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR);
+    ImGui::PushStyleColor(ImGuiCol_Border, BASIC_COLOR_HIGHLIGHTED);
+    ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
+        ImGui::SetNextItemWidth(-(OBSERVE_BUTTON_WIDTH + 8.0f)); // 8.0f = расстояние между полем и кнопкой
+            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к директории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
+                dir_path = input_buffer;
+                work_state = JUST_INPUT;
+            }
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::GetStyle().FrameBorderSize = 0.0f;
+
+
+}
+void Framework::draw_progress_bar() {
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, TITLEBAR_COLOR_ACTIVATED);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, TITLEBAR_COLOR);
+    ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR);
+        ImVec2 cursor_pos_before_progress_bar = ImGui::GetCursorPos();
+        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 30), "");
+
+        cursor_pos_before_progress_bar.y += 3;
+        ImGui::SetCursorPos(cursor_pos_before_progress_bar);
+        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 30));
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+}
+void Framework::draw_table() {
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 3.0f));
+    if (ImGui::BeginTable("my_table", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+    {
+        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 30.0f); // Колонка для кнопки раскрытия
+        ImGui::TableSetupColumn("Token");
+        ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 160.0f);
+        for (int i = 0; i < table.expandable_rows.size(); i++) {
+            Table_row_expandable& row = table.expandable_rows[i];
+            ImGui::TableNextRow(0, 30.0f); // Высота строки
+
+            // Рисуем кнопку в первой колонке
+            ImGui::TableNextColumn();
+            ImGui::PushID(i);
+
+            if (!table.expandable_rows[i].sub_types.empty()) {
+                ImGui::PushStyleColor(ImGuiCol_Button, TRANSPERENT);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SEMI_TRANSPERENT);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, LIGTHER_TRANSPERENT);
+                    if (ImGui::Button(row.is_expanded ? "-" : "+", ImVec2(30.0f, 30.0f))) {
+                        row.is_expanded = !row.is_expanded;
+                    }
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
+            }
+
+
+            std::string count_str = std::to_string(row.cnt);
+            std::string type_cpy = std::string(row.type);
+
+            ImGui::TableNextColumn();
+            ImGui::InputText("##token", &type_cpy, ImGuiInputTextFlags_ReadOnly);
+
+            ImGui::TableNextColumn();
+            ImGui::InputText("##count", &count_str, ImGuiInputTextFlags_ReadOnly);
+
+            if (row.is_expanded) {
+                for (int j = 0; j < row.sub_types.size(); j++) {
+                    ImGui::PushID(j);
+                    ImGui::TableNextRow(0, 30.0f); // Высота строки
+
+                    ImGui::TableNextColumn(); // скип колонки с кнопкой
+                    std::string count_str = std::to_string(row.sub_count[j]);
+                    std::string sub_type_cpy = row.sub_types[j];
+
+                    ImGui::TableNextColumn();
+                    ImGui::SameLine(0.0f, 30.0f); // сдвиг
+                    ImGui::InputText("##sub_token", &sub_type_cpy, ImGuiInputTextFlags_ReadOnly);
+
+                    ImGui::TableNextColumn();
+                    ImGui::InputText("##sub_count", &count_str, ImGuiInputTextFlags_ReadOnly);
+
+                    ImGui::PopID();
+                }
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
+    ImGui::PopStyleVar();
+
+}
+
 void Framework::save_button() {
-    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-55.0f));
     if (ImGui::Button("Сохранить", ImVec2(130, 40))) {
         open_save_dialog();
     }
     if (save_dialog) {
-        save_dialog_update(token_names, token_count);
+        save_dialog_update(types, sub_types);
     }
 }
-
 void Framework::back_button() {
-    ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-55.0f));
     if (ImGui::Button("Назад", ImVec2(130, 40))) {
         work_state = WAITING_INPUT;
         input_is_correct = true;
+    }
+}
+void Framework::observe_button() {
+    if (ImGui::Button("Обзор", ImVec2(OBSERVE_BUTTON_WIDTH, 0))) {
+        open_select_dialog();
+    }
+    if (select_dialog) {
+        select_dialog_update(input_buffer); // обновляет input_buffer
+    }
+    // ImGui::PopStyleColor();
+    // ImGui::PopStyleColor();
+}
+void Framework::continue_button() {
+    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-(145.0f+FRM_PDDNG), ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
+    if (ImGui::Button("Далее", ImVec2(130, 40))) {
+        dir_path = input_buffer;
+        work_state = JUST_INPUT;
+    }
+}
+
+string Framework::get_input() {
+    return dir_path;
+}
+void Framework::set_progress_bar(float value) {
+    progress_bar_fraction = value;
+}
+void Framework::set_table(
+    const std::unordered_map<std::string, int>& types_new,
+    const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_types_new) {
+    // Превращаем unordered_map в map для вывода в алфавитном порядке
+    types.clear(); types.insert(types_new.begin(), types_new.end());
+
+    sub_types.clear();
+    for (auto& [key, unordered_sub_map] : sub_types_new) {
+        std::map<std::string, int> ordered_sub_map(unordered_sub_map.begin(), unordered_sub_map.end());
+       sub_types[key] = ordered_sub_map;
+    }
+
+    for (auto& [type, cnt] : types) {
+        Table_row_expandable row;
+        row.type = type;
+        row.cnt = cnt;
+        for (auto& [sub_type, sub_cnt] : sub_types.at(type)) {
+            row.sub_types.push_back(sub_type);
+            row.sub_count.push_back(sub_cnt);
+        }
+        table.expandable_rows.push_back(row);
     }
 }
 
 void Framework::incorrect_input() {
     input_is_correct = false;
 }
-
 void Framework::draw_error_message() {
     ImGui::Text(" Ошибка: Некорректный ввод");
 }
