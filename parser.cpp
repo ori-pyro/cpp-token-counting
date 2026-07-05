@@ -22,16 +22,17 @@ void Parser::parser(std::string& text) {
         if (need_to_check_prev_token) {
             std::string token(prev, start - prev);
             // std::cout << "tok: " << token << std::endl;
-            if (keywords.contains(token)) {
-                tokens["keyword"]++;
+            auto it = keywords.find(token);
+            if (it != keywords.end()) {
+                detailedTokens["token"][it->second]++;
                 if (token == "true" || token == "false") {
-                    tokens["boolean-literal"]++;
+                    detailedTokens["literal"]["boolean-literal"]++;
                 } else if (token == "nullptr") {
-                    tokens["pointer-literal"]++;
+                    detailedTokens["literal"]["pointer-literal"]++;
                 }
-            } else if (operatorsKeywords.contains(token)) {
-                tokens["keyword"]++;
-                tokens["operator-or-punctuator"]++;
+                else if (it->second == "alternative-tokens-keyword"){
+                    detailedTokens["operator-or-punctuator"]["operator"]++;
+                }
             }
             else if (!token.empty()) { // Если два сепаратора стоят в притык то получим пустой токен
                 tokens["identifier"]++;
@@ -48,15 +49,22 @@ void Parser::parser(std::string& text) {
             || separator.empty())
         ) {
             if (separator == "//" || separator == "#") {
+                tokens["comments"]++;
                 skip_to_end_of_line();
                 need_to_check_prev_token = false;
                	prev = rest.data();
             } else if (separator == "/*") {
+                tokens["comments"]++;
                 skip_multy_comment();
                 need_to_check_prev_token = false;
                	prev = rest.data();
             } else {
-                tokens["operator-or-punctuator"]++;
+                if(punctuators.contains(token)){
+                    detailedTokens["operator-or-punctuator"]["punctuator"]++;
+                }
+                else{
+                    detailedTokens["operator-or-punctuator"]["operator"]++;
+                }
             }
         }
 
@@ -102,12 +110,12 @@ void Parser::parser(std::string& text) {
 void Parser::digit_analyze() {
     if (RE2::Consume(&rest, float_exp)) {
         if (!is_user_defined_literal()){
-            tokens["floating-point-literal"]++;
+            detailedTokens["literal"]["floating-point-literal"]++;
         }
     } else {
         RE2::Consume(&rest, int_skip);
         if (!is_user_defined_literal()) {
-            tokens["integer-literal"]++;
+            detailedTokens["literal"]["integer-literal"]++;
         }
     }
 }
@@ -120,7 +128,7 @@ void Parser::string_analyze() {
 
     if (!is_user_defined_literal()) {
         // std::cout << match << '\n';
-        tokens["string-literal"]++;
+        detailedTokens["literal"]["string-literal"]++;
     }
 }
 
@@ -134,14 +142,14 @@ void Parser::raw_string_analyze() {
     RE2::FindAndConsume(&rest, RE2(raw_string_end));
 
     if (!is_user_defined_literal()) {
-        tokens["string-literal"]++;
+        detailedTokens["literal"]["string-literal"]++;
     }
 }
 
 void Parser::character_analyze() {
     RE2::Consume(&rest, character_consume);
     if (!is_user_defined_literal()) {
-        tokens["character-literal"]++;
+        detailedTokens["literal"]["character-literal"]++;
     }
 }
 
@@ -160,8 +168,8 @@ void Parser::clear_table() {
 }
 
 bool Parser::is_user_defined_literal() {
-    if (rest.starts_with('_')) {
-        tokens["user-defined-literal"]++;
+    if (rest.starts_with('_') || rest.starts_with('u') || rest.starts_with('i') || rest.starts_with('s') || rest.starts_with('m') || rest.starts_with('n') || rest.starts_with('h')) {
+        detailedTokens["literal"]["user-defined-literal"]++;
         return true;
     }
     return false;
