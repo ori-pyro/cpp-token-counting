@@ -9,7 +9,7 @@
 using namespace std;
 
 Framework::Framework() {
-        SetConfigFlags(FLAG_WINDOW_UNDECORATED);        // Настройки внешнего окна Raylib (без рамок)
+        SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_HIGHDPI);
         InitWindow(WIDTH, HEIGHT, "Token Counter");
         SetTargetFPS(60);
 
@@ -78,6 +78,12 @@ void Framework::update() {
     }
 
     rlImGuiBegin();
+    // На fractional scaling (Wayland) синхронизируем framebuffer scale с raylib.
+    {
+        Vector2 dpiScale = GetWindowScaleDPI();
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplayFramebufferScale = ImVec2(dpiScale.x, dpiScale.y);
+    }
 
     // Убираем внутренние отступы окна в ноль
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
@@ -87,18 +93,20 @@ void Framework::update() {
                             ImGuiWindowFlags_NoBringToFrontOnFocus;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(GetScreenWidth(), GetScreenHeight()), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("MainPanel", nullptr, flags);
-            draw_titlebar();
+        draw_titlebar();
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
 
             // Контент в основном окне
-            ImGui::SetCursorPosY(TITLE_BAR_HEIGHT);
+            const float content_top = TITLE_BAR_HEIGHT;
+            const float content_height = HEIGHT - content_top - DOWN_BUTTONS_FIELD;
+            ImGui::SetCursorPosY(content_top);
                 ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
-                ImGui::BeginChild("Content", ImVec2(0, TABLE_HEIGHT), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+                ImGui::BeginChild("Content", ImVec2(0, content_height), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
                     if (work_state == WAITING_INPUT) {
                         draw_input_field();
 

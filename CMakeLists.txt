@@ -80,7 +80,6 @@ set(MAIN_SOURCES
 )
 
 add_executable(token_counter ${MAIN_SOURCES} )
-
 target_link_libraries(token_counter PRIVATE
     rlimgui_lib
     imgui
@@ -88,3 +87,18 @@ target_link_libraries(token_counter PRIVATE
     raylib
     portable-file-dialogs
 )
+
+if(UNIX AND NOT APPLE)
+  add_executable(token_counter_linux ${MAIN_SOURCES})
+  target_link_libraries(token_counter_linux PRIVATE
+        rlimgui_lib
+        imgui
+        re2::re2
+        raylib
+        portable-file-dialogs
+    )
+  set_target_properties(token_counter_linux PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        OUTPUT_NAME "token_counter_linux"
+    )
+endif()
