@@ -31,7 +31,7 @@ void Parser::parser(std::string& text) {
                     detailedTokens["literal"]["pointer-literal"]++;
                 }
                 else if (it->second == "alternative-tokens-keyword"){
-                    detailedTokens["operator-or-punctuator"]["operator"]++;
+                    detailedTokens["operator-or-punctuator"][it->first]++;
                 }
             }
             else if (!token.empty()) { // Если два сепаратора стоят в притык то получим пустой токен
@@ -64,11 +64,7 @@ void Parser::parser(std::string& text) {
                 need_to_check_prev_token = false;
                	prev = rest.data();
             } else {
-                if(punctuators.contains(separator)){
-                    detailedTokens["operator-or-punctuator"]["punctuator"]++;
-                }
-                else{
-                    detailedTokens["operator-or-punctuator"]["operator"]++;
+                    detailedTokens["operator-or-punctuator"][separator]++;
                 }
             }
         }
