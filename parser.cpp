@@ -43,13 +43,18 @@ void Parser::parser(std::string& text) {
         need_to_check_prev_token = true;
 
         // Разделитель (operator-or-punctuator)
-        if (!(separator.starts_with(" ") || separator.starts_with("\n") || separator.starts_with("\t")
+        if(separator.find('\n') != std::string::npos){
+            tokens["lines"]++;
+        }
+        else if (!(separator.starts_with(" ") || separator.starts_with("\t")
             || separator == ")" || separator == "]" || separator == "}"
             || separator == ":]" || separator == "%>" || separator == ":>"
             || separator.empty())
         ) {
             if (separator == "//" || separator == "#") {
-                tokens["comments"]++;
+                if(separator == "//"){
+                    tokens["comments"]++;
+                }
                 skip_to_end_of_line();
                 need_to_check_prev_token = false;
                	prev = rest.data();
@@ -153,6 +158,7 @@ void Parser::character_analyze() {
 
 void Parser::skip_to_end_of_line() {
     RE2::FindAndConsume(&rest, end_of_line);
+    tokens["lines"]++;
 }
 
 void Parser::skip_multy_comment() {
@@ -162,6 +168,20 @@ void Parser::skip_multy_comment() {
 void Parser::clear_table() {
     for (auto& [key, value] : tokens) {
         value = 0;
+    }
+    for(auto& [k,detailed_tokens] : detailedTokens){
+        for(auto& [key, value] : detailed_tokens){
+            value = 0;
+        }
+    }
+
+}
+
+void Parser::Summ(){
+    for(auto& [k,detailed_tokens] : detailedTokens){
+        for(auto& [key, value] : detailed_tokens){
+            tokens[k] += value;
+        }
     }
 }
 
