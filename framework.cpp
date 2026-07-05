@@ -106,6 +106,8 @@ void Framework::update() {
                         ImGui::SameLine();
                         observe_button();
 
+                        draw_check_box();
+
                         // Сообщение об ошибке
                         if (!input_is_correct) { draw_error_message(); }
                     }
@@ -237,8 +239,6 @@ void Framework::draw_input_field() {
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::GetStyle().FrameBorderSize = 0.0f;
-
-
 }
 void Framework::draw_progress_bar() {
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, TITLEBAR_COLOR_ACTIVATED);
@@ -321,6 +321,17 @@ void Framework::draw_table() {
 
 }
 
+void Framework::draw_check_box() {
+    ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+    ImGui::GetStyle().FrameBorderSize = 1.5f;
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::Checkbox(".cpp", &cpp);
+        ImGui::Checkbox(".h", &h);
+        ImGui::Checkbox(".hpp", &hpp);
+    ImGui::PopStyleVar();
+    ImGui::GetStyle().FrameBorderSize = 0.0f;
+}
 void Framework::save_button() {
     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
 
@@ -354,6 +365,7 @@ void Framework::continue_button() {
     if (ImGui::Button("Далее", ImVec2(130, 40))) {
         dir_path = input_buffer;
         work_state = JUST_INPUT;
+        check_box_flag = cpp + 2*h + 4*hpp;
     }
 }
 

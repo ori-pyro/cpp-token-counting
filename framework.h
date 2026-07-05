@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <cstdint>
 #include <map>
 
 struct Table_row_expandable {
@@ -57,6 +58,11 @@ public:
     std::string dir_path = "";
     std::string input_buffer = "";
 
+    uint8_t check_box_flag = 0;
+    bool cpp = false;
+    bool h = false;
+    bool hpp = false;
+
     bool isDragging;
     Rectangle titleBarRect;
     Vector2 dragOffset;
@@ -79,6 +85,7 @@ public:
     void draw_progress_bar();
     void draw_table();
 
+    void draw_check_box();
     void save_button();
     void back_button();
     void observe_button();

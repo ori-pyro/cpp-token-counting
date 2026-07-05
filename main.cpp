@@ -21,7 +21,7 @@ atomic<bool> file_name_updated{ false };
 unordered_map<string, int> tokens;
 unordered_map<string, unordered_map<string, int>> detailedTokens;
 
-void token_counting(std::string dir_path) {
+void token_counting(std::string dir_path, uint8_t check_box_flag) {
 
     Parser parser;
 
@@ -30,7 +30,8 @@ void token_counting(std::string dir_path) {
     int curr_file_number = 0;
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
         fs::path extension = entry.path().extension();
-        if (extension == ".cpp" || extension == ".h" || extension == ".hpp") {
+        bool chosen_extention = check_box_flag & ((extension == ".cpp") + (extension == ".h")*2 + (extension == ".hpp")*4);
+        if (chosen_extention) {
             count_of_files++;
         }
     }
@@ -38,7 +39,8 @@ void token_counting(std::string dir_path) {
     // Проход по всем файлам
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
         fs::path extension = entry.path().extension();
-        if (extension == ".cpp" || extension == ".h" || extension == ".hpp") {
+        bool chosen_extention = check_box_flag & ((extension == ".cpp") + (extension == ".h")*2 + (extension == ".hpp")*4);
+        if (chosen_extention) {
             curr_file_number++;
 
             // передаём atomic заполненность прогрессбара в gui
@@ -96,7 +98,7 @@ int main() {
                 GUI.incorrect_input();
                 continue;
             } else {
-                std::thread analyzer(token_counting, dir_path.string());
+                std::thread analyzer(token_counting, dir_path.string(), GUI.check_box_flag);
                 analyzer.detach();
                 GUI.work_state = WORK_IN_PROGRESS;
             }
