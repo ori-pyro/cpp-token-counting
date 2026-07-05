@@ -29,14 +29,16 @@ void token_counting(std::string dir_path) {
     int count_of_files = 0;
     int curr_file_number = 0;
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-        if (entry.path().extension() == ".cpp") {
+        fs::path extension = entry.path().extension();
+        if (extension == ".cpp" || extension == ".h" || extension == ".hpp") {
             count_of_files++;
         }
     }
 
     // Проход по всем файлам
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-        if (entry.path().extension() == ".cpp") {
+        fs::path extension = entry.path().extension();
+        if (extension == ".cpp" || extension == ".h" || extension == ".hpp") {
             curr_file_number++;
 
             // передаём atomic заполненность прогрессбара в gui
@@ -58,6 +60,7 @@ void token_counting(std::string dir_path) {
             }
         }
     }
+    parser.Summ();
 
     // копируем
     tokens = parser.tokens;

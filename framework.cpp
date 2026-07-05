@@ -306,6 +306,7 @@ void Framework::draw_table() {
                     ImGui::InputText("##sub_token", &sub_type_cpy, ImGuiInputTextFlags_ReadOnly);
 
                     ImGui::TableNextColumn();
+                    ImGui::SameLine(0.0f, 30.0f); // сдвиг
                     ImGui::InputText("##sub_count", &count_str, ImGuiInputTextFlags_ReadOnly);
 
                     ImGui::PopID();
@@ -365,13 +366,17 @@ void Framework::set_progress_bar(float value) {
 void Framework::set_table(
     const std::unordered_map<std::string, int>& types_new,
     const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_types_new) {
+
+
+    table = Table();
+
     // Превращаем unordered_map в map для вывода в алфавитном порядке
     types.clear(); types.insert(types_new.begin(), types_new.end());
 
     sub_types.clear();
     for (auto& [key, unordered_sub_map] : sub_types_new) {
         std::map<std::string, int> ordered_sub_map(unordered_sub_map.begin(), unordered_sub_map.end());
-       sub_types[key] = ordered_sub_map;
+        sub_types[key] = ordered_sub_map;
     }
 
     for (auto& [type, cnt] : types) {
