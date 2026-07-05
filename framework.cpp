@@ -91,44 +91,52 @@ void Framework::update() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("MainPanel", nullptr, flags);
+            draw_titlebar();
 
-    draw_titlebar();
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
 
-    // Контент в основном окне
-    ImGui::SetCursorPosY(TITLE_BAR_HEIGHT);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
-    ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
-        if (work_state == WAITING_INPUT) {
-            draw_input_field();
+            // Контент в основном окне
+            ImGui::SetCursorPosY(TITLE_BAR_HEIGHT);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
+                ImGui::BeginChild("Content", ImVec2(0, TABLE_HEIGHT), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+                    if (work_state == WAITING_INPUT) {
+                        draw_input_field();
 
-            // Кнопка Обзор
-            ImGui::SameLine();
-            observe_button();
+                        // Кнопка Обзор
+                        ImGui::SameLine();
+                        observe_button();
 
-            // Сообщение об ошибке
-            if (!input_is_correct) { draw_error_message(); }
+                        // Сообщение об ошибке
+                        if (!input_is_correct) { draw_error_message(); }
+                    }
+                    else if (work_state == WORK_IN_PROGRESS) {
+                        draw_progress_bar();
+                    }
+                    else if (work_state == SHOW_TABLE) {
+                        draw_table();
+                    }
+                ImGui::EndChild();
+                ImGui::PopStyleVar();
 
-            // Кнопка Далее
-            continue_button();
-        }
-        else if (work_state == WORK_IN_PROGRESS) {
-            draw_progress_bar();
-        }
-        else if (work_state == SHOW_TABLE) {
-            draw_table();
 
-            ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-55.0f));
-            save_button();
+                // Контент снизу с кнопками
+                ImGui::SetCursorPosY(HEIGHT-DOWN_BUTTONS_FIELD);
+                ImGui::BeginChild("Buttons", ImVec2(0, DOWN_BUTTONS_FIELD), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+                    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
+                        if (work_state == WAITING_INPUT) {
+                            continue_button();
+                        } else if (work_state == SHOW_TABLE) {
+                            save_button();
 
-            ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-55.0f));
-            back_button();
-        }
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
+                            back_button();
+                        }
+                    ImGui::PopStyleVar();
+                ImGui::EndChild();
+            ImGui::PopStyleColor();
 
     ImGui::End();
+    ImGui::PopStyleVar();
+
 
     rlImGuiEnd();
     EndDrawing();
@@ -184,8 +192,6 @@ void Framework::draw_titlebar() {
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
-
-    ImGui::PopStyleVar();
 }
 void Framework::move_by_drag_titlebar() {
 
@@ -315,6 +321,8 @@ void Framework::draw_table() {
 }
 
 void Framework::save_button() {
+    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
+
     if (ImGui::Button("Сохранить", ImVec2(130, 40))) {
         open_save_dialog();
     }
@@ -323,6 +331,8 @@ void Framework::save_button() {
     }
 }
 void Framework::back_button() {
+    ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
+
     if (ImGui::Button("Назад", ImVec2(130, 40))) {
         work_state = WAITING_INPUT;
         input_is_correct = true;

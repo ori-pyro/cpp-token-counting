@@ -28,8 +28,10 @@ void save_dialog_update(
             std::ofstream file(save_path);
             for (auto& [type, cnt] : types) {
                 file << type << "; " << cnt << '\n';
-                for (auto& [sub_type, sub_cnt] : sub_types.at(type)) {
-                    file << '\t' << sub_type << "; " << sub_cnt;
+                if (sub_types.contains(type)) {
+                    for (auto& [sub_type, sub_cnt] : sub_types.at(type)) {
+                        file << '\t' << sub_type << "; " << sub_cnt << '\n';
+                    }
                 }
             }
         }

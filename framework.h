@@ -25,6 +25,9 @@ public:
     const float WIDTH = 800.0f;
     const float HEIGHT = 500.0f;
     const float TITLE_BAR_HEIGHT = 40.0f;
+    const float DOWN_BUTTONS_FIELD = 86.0f;
+    const float TABLE_HEIGHT = HEIGHT - TITLE_BAR_HEIGHT - DOWN_BUTTONS_FIELD;
+
     const float CLOSE_BUTTON_WIDTH = 40.0f;
     const float OBSERVE_BUTTON_WIDTH = 80.0f;
     const float FRM_PDDNG = 8.0f;
