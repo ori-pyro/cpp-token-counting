@@ -193,4 +193,5 @@ public:
     bool is_user_defined_literal();
 
     void clear_table();
+    void Summ();
 };
