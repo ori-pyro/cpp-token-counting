@@ -4,6 +4,7 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <unordered_map>
 #include "framework.h"
 #include "parser.h"
 
@@ -17,33 +18,8 @@ atomic<float> progress_bar_fraction_atomic{ 0.0f };
 char shared_file_name_buffer[512] = {0};
 atomic<bool> file_name_updated{ false };
 
-vector<string> global_token_names = {
-    "identifier",
-    "keyword",
-    "integer-literal",
-    "character-literal",
-    "floating-point-literal",
-    "string-literal",
-    "boolean-literal",
-    "pointer-literal",
-    "user-defined-literal",
-    // "header-name",
-    "operator-or-punctuator"
-};
-vector<int> global_token_count = {
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    // 0,
-    0
-};
-
+unordered_map<string, int> tokens;
+unordered_map<string, unordered_map<string, int>> detailedTokens;
 
 void token_counting(std::string dir_path) {
 
@@ -82,10 +58,11 @@ void token_counting(std::string dir_path) {
             }
         }
     }
-    // загрузка в таблицу
-    for (int i = 0; i < global_token_names.size(); i++) {
-        global_token_count[i] = parser.tokens[global_token_names[i]];
-    }
+
+    // копируем
+    tokens = parser.tokens;
+    detailedTokens = parser.detailedTokens;
+
     parser.clear_table();
 
     work_state_atomic = SHOW_TABLE;
@@ -131,7 +108,7 @@ int main() {
             // Если паралельный алгоритм завершил работу
             if (work_state_atomic == SHOW_TABLE) {
                 GUI.work_state = SHOW_TABLE;
-                GUI.set_table(global_token_names, global_token_count);
+                GUI.set_table(tokens, detailedTokens);
 
                 work_state_atomic = WAITING_INPUT; // Если пользователь нажмёт ОТМЕНА
             }

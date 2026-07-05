@@ -24,7 +24,7 @@ void Parser::parser(std::string& text) {
             // std::cout << "tok: " << token << std::endl;
             auto it = keywords.find(token);
             if (it != keywords.end()) {
-                detailedTokens["token"][it->second]++;
+                detailedTokens["keyword"][it->second]++;
                 if (token == "true" || token == "false") {
                     detailedTokens["literal"]["boolean-literal"]++;
                 } else if (token == "nullptr") {
@@ -59,7 +59,7 @@ void Parser::parser(std::string& text) {
                 need_to_check_prev_token = false;
                	prev = rest.data();
             } else {
-                if(punctuators.contains(token)){
+                if(punctuators.contains(separator)){
                     detailedTokens["operator-or-punctuator"]["punctuator"]++;
                 }
                 else{
@@ -100,8 +100,6 @@ void Parser::parser(std::string& text) {
         // boolean-literal обрабатывается в keywords;
 
         prev = match.data() + match.size();
-
-        // TODO user-defined-literal
    	}
 }
 

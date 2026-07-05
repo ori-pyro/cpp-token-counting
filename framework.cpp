@@ -368,9 +368,12 @@ void Framework::set_table(
         Table_row_expandable row;
         row.type = type;
         row.cnt = cnt;
-        for (auto& [sub_type, sub_cnt] : sub_types.at(type)) {
-            row.sub_types.push_back(sub_type);
-            row.sub_count.push_back(sub_cnt);
+
+        if (sub_types.contains(type)) {
+            for (auto& [sub_type, sub_cnt] : sub_types.at(type)) {
+                row.sub_types.push_back(sub_type);
+                row.sub_count.push_back(sub_cnt);
+            }
         }
         table.expandable_rows.push_back(row);
     }
