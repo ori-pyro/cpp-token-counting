@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <map>
 
 struct Table_row_expandable {
     std::string type = "";
@@ -25,7 +26,8 @@ public:
     const float HEIGHT = 500.0f;
     const float TITLE_BAR_HEIGHT = 40.0f;
     const float CLOSE_BUTTON_WIDTH = 40.0f;
-    const float INPUT_BUTTON_WIDTH = 80.0f;
+    const float OBSERVE_BUTTON_WIDTH = 80.0f;
+    const float FRM_PDDNG = 8.0f;
 
     // ЦВЕТА
     const ImVec4 BASIC_COLOR = ImVec4(36.0/255.0f, 39/255.0f, 58/255.0f, 1.0f);
@@ -41,9 +43,8 @@ public:
     const ImVec4 SEMI_TRANSPERENT = ImVec4(1.0f, 1.0f, 1.0f, 0.3f);
     const ImVec4 LIGTHER_TRANSPERENT = ImVec4(1.0f, 1.0f, 1.0f, 0.6f);
 
-    std::unordered_map<std::string, bool> type_is_expanded;
-    std::unordered_map<std::string, int> types;
-    std::unordered_map<std::string, std::unordered_map<std::string, int>> sub_types;
+    std::map<std::string, int> types;
+    std::map<std::string, std::map<std::string, int>> sub_types;
 
     Table table;
 
@@ -63,26 +64,30 @@ public:
     float progress_bar_fraction;
 
     bool input_is_correct = true;
-    bool save_dialog_opened = false;
 
     Framework();
+    void update();
     ~Framework();
 
-    std::string get_input();
-    void update();
-    void text_input();
-    void set_progress_bar(float);
-    void draw_progress_bar();
     void draw_titlebar();
-    void draw_input_field();
     void move_by_drag_titlebar();
+
+    void draw_input_field();
+    void draw_progress_bar();
     void draw_table();
+
     void save_button();
     void back_button();
-    void incorrect_input();
-    void draw_error_message();
+    void observe_button();
+    void continue_button();
+
+    std::string get_input();
+    void set_progress_bar(float);
     void set_table(
         const std::unordered_map<std::string, int>& type,
         const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_type
     );
+
+    void incorrect_input();
+    void draw_error_message();
 };

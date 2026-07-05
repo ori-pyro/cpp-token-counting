@@ -6,9 +6,6 @@
 #include "save_dialog.h"
 #include "framework.h"
 
-#include <iostream>
-
-
 using namespace std;
 
 Framework::Framework() {
@@ -50,19 +47,20 @@ Framework::Framework() {
         isDragging = false;
         dragOffset = { 0, 0 }; // Координаты мыши относительно левого верхнего угла окна
 
-        // ГЛОБАЛЬНЫЕ НАСТРОЙКИ СТИЛЯ КНОПОК
         ImGuiStyle& style = ImGui::GetStyle();
+
+        // ГЛОБАЛЬНЫЕ НАСТРОЙКИ СТИЛЯ КНОПОК
         style.Colors[ImGuiCol_Button]        = BASIC_COLOR;             // Обычная
         style.Colors[ImGuiCol_ButtonHovered] = BASIC_COLOR_HIGHLIGHTED; // При наведении
         style.Colors[ImGuiCol_ButtonActive]  = BASIC_COLOR_ACTIVATED;   // При нажатии
 
         // СТИЛЬ РАМОК
+        style.FramePadding = ImVec2(FRM_PDDNG, FRM_PDDNG);
         style.Colors[ImGuiCol_FrameBg]              = TRANSPERENT;
         style.Colors[ImGuiCol_Border]               = TITLEBAR_COLOR_ACTIVATED;
         style.Colors[ImGuiCol_TableBorderLight]     = TITLEBAR_COLOR_ACTIVATED;
         style.Colors[ImGuiCol_TableBorderStrong]    = TITLEBAR_COLOR_ACTIVATED;
 }
-
 void Framework::update() {
     move_by_drag_titlebar();
 
@@ -88,14 +86,11 @@ void Framework::update() {
                             ImGuiWindowFlags_NoCollapse |
                             ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(GetScreenWidth(), GetScreenHeight()), ImGuiCond_Always);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("MainPanel", nullptr, flags);
-
-
 
     draw_titlebar();
 
@@ -106,16 +101,27 @@ void Framework::update() {
     ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
         if (work_state == WAITING_INPUT) {
             draw_input_field();
-            if (!input_is_correct) {
-                draw_error_message();
-            }
+
+            // Кнопка Обзор
+            ImGui::SameLine();
+            observe_button();
+
+            // Сообщение об ошибке
+            if (!input_is_correct) { draw_error_message(); }
+
+            // Кнопка Далее
+            continue_button();
         }
         else if (work_state == WORK_IN_PROGRESS) {
             draw_progress_bar();
-                    }
+        }
         else if (work_state == SHOW_TABLE) {
             draw_table();
+
+            ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-55.0f));
             save_button();
+
+            ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-55.0f));
             back_button();
         }
     ImGui::EndChild();
@@ -127,35 +133,9 @@ void Framework::update() {
     rlImGuiEnd();
     EndDrawing();
 }
-
-void Framework::text_input() {} //TODO
-
 Framework::~Framework() {
     rlImGuiShutdown();
     CloseWindow();
-}
-
-string Framework::get_input() {
-    return dir_path;
-}
-
-void Framework::set_progress_bar(float value) {
-    progress_bar_fraction = value;
-}
-
-void Framework::draw_progress_bar() {
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, TITLEBAR_COLOR_ACTIVATED);
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, TITLEBAR_COLOR);
-    ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR);
-        ImVec2 cursor_pos_before_progress_bar = ImGui::GetCursorPos();
-        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 30), "");
-
-        cursor_pos_before_progress_bar.y += 3;
-        ImGui::SetCursorPos(cursor_pos_before_progress_bar);
-        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 30));
-    ImGui::PopStyleColor();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleColor();
 }
 
 void Framework::draw_titlebar() {
@@ -207,29 +187,70 @@ void Framework::draw_titlebar() {
 
     ImGui::PopStyleVar();
 }
+void Framework::move_by_drag_titlebar() {
 
-void Framework::draw_input_field() {
-    // Поле ввода
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR_HIGHLIGHTED);
-        ImGui::SetNextItemWidth(-INPUT_BUTTON_WIDTH);
-        ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
-            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к дирректории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
-                dir_path = input_buffer;
-                work_state = JUST_INPUT;
-            }
-        ImGui::PopStyleColor();
-    ImGui::PopStyleColor();
+    titleBarRect.width = (float)GetScreenWidth();
 
-    // Кнопка ввода
-    ImGui::SameLine();
-    if (ImGui::Button("Ввод", ImVec2(INPUT_BUTTON_WIDTH, 0))) {
-        dir_path = input_buffer;
-        work_state = JUST_INPUT;
+    Vector2 mousePos = GetMousePosition();
+
+    // Двигание окна, зажатием тайтлбара
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+        CheckCollisionPointRec(mousePos, titleBarRect))
+    {
+        if (mousePos.x < (GetScreenWidth() - CLOSE_BUTTON_WIDTH)) { // Проверяем что не попали кнопку закрытия
+            isDragging = true;
+            dragOffset = mousePos;
+        }
+    }
+
+    // Двигаем окно
+    if (isDragging) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            Vector2 currentWinPos = GetWindowPosition();
+            int nextX = (int)(currentWinPos.x + mousePos.x - dragOffset.x);
+            int nextY = (int)(currentWinPos.y + mousePos.y - dragOffset.y);
+            SetWindowPosition(nextX, nextY);
+        } else {
+            isDragging = false; // Отпустили мышь — закончили движение
+        }
     }
 }
 
+void Framework::draw_input_field() {
+    // Поле ввода
+    ImGui::GetStyle().FrameBorderSize = 1.8f;
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR);
+    ImGui::PushStyleColor(ImGuiCol_Border, BASIC_COLOR_HIGHLIGHTED);
+    ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
+        ImGui::SetNextItemWidth(-(OBSERVE_BUTTON_WIDTH + 8.0f)); // 8.0f = расстояние между полем и кнопкой
+            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к директории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
+                dir_path = input_buffer;
+                work_state = JUST_INPUT;
+            }
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::GetStyle().FrameBorderSize = 0.0f;
+
+
+}
+void Framework::draw_progress_bar() {
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, TITLEBAR_COLOR_ACTIVATED);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, TITLEBAR_COLOR);
+    ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR);
+        ImVec2 cursor_pos_before_progress_bar = ImGui::GetCursorPos();
+        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 30), "");
+
+        cursor_pos_before_progress_bar.y += 3;
+        ImGui::SetCursorPos(cursor_pos_before_progress_bar);
+        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 30));
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+}
 void Framework::draw_table() {
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 3.0f));
     if (ImGui::BeginTable("my_table", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
     {
         ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 30.0f); // Колонка для кнопки раскрытия
@@ -289,14 +310,60 @@ void Framework::draw_table() {
         ImGui::EndTable();
     }
     ImGui::PopStyleVar();
+    ImGui::PopStyleVar();
+
 }
 
+void Framework::save_button() {
+    if (ImGui::Button("Сохранить", ImVec2(130, 40))) {
+        open_save_dialog();
+    }
+    if (save_dialog) {
+        save_dialog_update(types, sub_types);
+    }
+}
+void Framework::back_button() {
+    if (ImGui::Button("Назад", ImVec2(130, 40))) {
+        work_state = WAITING_INPUT;
+        input_is_correct = true;
+    }
+}
+void Framework::observe_button() {
+    if (ImGui::Button("Обзор", ImVec2(OBSERVE_BUTTON_WIDTH, 0))) {
+        open_select_dialog();
+    }
+    if (select_dialog) {
+        select_dialog_update(input_buffer); // обновляет input_buffer
+    }
+    // ImGui::PopStyleColor();
+    // ImGui::PopStyleColor();
+}
+void Framework::continue_button() {
+    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-(145.0f+FRM_PDDNG), ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
+    if (ImGui::Button("Далее", ImVec2(130, 40))) {
+        dir_path = input_buffer;
+        work_state = JUST_INPUT;
+    }
+}
+
+string Framework::get_input() {
+    return dir_path;
+}
+void Framework::set_progress_bar(float value) {
+    progress_bar_fraction = value;
+}
 void Framework::set_table(
     const std::unordered_map<std::string, int>& types_new,
-    const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_types_new)
-{
-    types = types_new;
-    sub_types = sub_types_new;
+    const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_types_new) {
+    // Превращаем unordered_map в map для вывода в алфавитном порядке
+    types.clear(); types.insert(types_new.begin(), types_new.end());
+
+    sub_types.clear();
+    for (auto& [key, unordered_sub_map] : sub_types_new) {
+        std::map<std::string, int> ordered_sub_map(unordered_sub_map.begin(), unordered_sub_map.end());
+       sub_types[key] = ordered_sub_map;
+    }
+
     for (auto& [type, cnt] : types) {
         Table_row_expandable row;
         row.type = type;
@@ -309,57 +376,9 @@ void Framework::set_table(
     }
 }
 
-void Framework::move_by_drag_titlebar() {
-
-    titleBarRect.width = (float)GetScreenWidth();
-
-    Vector2 mousePos = GetMousePosition();
-
-    // Двигание окна, зажатием тайтлбара
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-        CheckCollisionPointRec(mousePos, titleBarRect))
-    {
-        if (mousePos.x < (GetScreenWidth() - CLOSE_BUTTON_WIDTH)) { // Проверяем что не попали кнопку закрытия
-            isDragging = true;
-            dragOffset = mousePos;
-        }
-    }
-
-    // Двигаем окно
-    if (isDragging) {
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            Vector2 currentWinPos = GetWindowPosition();
-            int nextX = (int)(currentWinPos.x + mousePos.x - dragOffset.x);
-            int nextY = (int)(currentWinPos.y + mousePos.y - dragOffset.y);
-            SetWindowPosition(nextX, nextY);
-        } else {
-            isDragging = false; // Отпустили мышь — закончили движение
-        }
-    }
-}
-
-void Framework::save_button() {
-    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-55.0f));
-    if (ImGui::Button("Сохранить", ImVec2(130, 40))) {
-        open_save_dialog();
-    }
-    if (save_dialog) {
-        save_dialog_update(types, sub_types);
-    }
-}
-
-void Framework::back_button() {
-    ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-55.0f));
-    if (ImGui::Button("Назад", ImVec2(130, 40))) {
-        work_state = WAITING_INPUT;
-        input_is_correct = true;
-    }
-}
-
 void Framework::incorrect_input() {
     input_is_correct = false;
 }
-
 void Framework::draw_error_message() {
     ImGui::Text(" Ошибка: Некорректный ввод");
 }
