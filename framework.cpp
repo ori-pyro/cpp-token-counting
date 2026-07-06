@@ -9,7 +9,7 @@
 using namespace std;
 
 Framework::Framework() {
-        SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_HIGHDPI);
+        SetConfigFlags(FLAG_WINDOW_UNDECORATED);
         InitWindow(WIDTH, HEIGHT, "Token Counter");
         SetTargetFPS(60);
 
@@ -78,11 +78,10 @@ void Framework::update() {
     }
 
     rlImGuiBegin();
-    // На fractional scaling (Wayland) синхронизируем framebuffer scale с raylib.
+    // Принудительно отключаем DPI scaling: одинаковый UI размер на всех платформах.
     {
-        Vector2 dpiScale = GetWindowScaleDPI();
         ImGuiIO& io = ImGui::GetIO();
-        io.DisplayFramebufferScale = ImVec2(dpiScale.x, dpiScale.y);
+        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
     }
 
     // Убираем внутренние отступы окна в ноль
