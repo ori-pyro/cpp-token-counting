@@ -9,7 +9,7 @@
 using namespace std;
 
 Framework::Framework() {
-        SetConfigFlags(FLAG_WINDOW_UNDECORATED);
+        SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_HIGHDPI);
         InitWindow(WIDTH, HEIGHT, "Token Counter");
         SetTargetFPS(60);
 
@@ -22,14 +22,14 @@ Framework::Framework() {
         regular_font = io.Fonts->AddFontFromMemoryCompressedTTF(
                 myFontData_compressed_data,        // Имя массива из JetBrainsMonoFont.h
                 myFontData_compressed_size,        // Размер массива из JetBrainsMonoFont.h
-                24.0f,                             // Размер шрифта в пикселях
+                18.0f,                             // Размер шрифта в пикселях
                 nullptr,                           // Настройки (оставляем nullptr)
                 io.Fonts->GetGlyphRangesCyrillic() // ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
             );
         small_font = io.Fonts->AddFontFromMemoryCompressedTTF(
                 myFontData_compressed_data,        // Имя массива из JetBrainsMonoFont.h
                 myFontData_compressed_size,        // Размер массива из JetBrainsMonoFont.h
-                18.0f,                             // Размер шрифта в пикселях
+                12.0f,                             // Размер шрифта в пикселях
                 nullptr,                           // Настройки (оставляем nullptr)
                 io.Fonts->GetGlyphRangesCyrillic() // ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
             );
@@ -55,13 +55,15 @@ Framework::Framework() {
         style.Colors[ImGuiCol_ButtonActive]  = BASIC_COLOR_ACTIVATED;   // При нажатии
 
         // СТИЛЬ РАМОК
-        style.FramePadding = ImVec2(FRM_PDDNG, FRM_PDDNG);
+        style.FramePadding = FRAME_PADDING_VEC;
         style.Colors[ImGuiCol_FrameBg]              = TRANSPERENT;
         style.Colors[ImGuiCol_Border]               = TITLEBAR_COLOR_ACTIVATED;
         style.Colors[ImGuiCol_TableBorderLight]     = TITLEBAR_COLOR_ACTIVATED;
         style.Colors[ImGuiCol_TableBorderStrong]    = TITLEBAR_COLOR_ACTIVATED;
 }
 void Framework::update() {
+    float TABLE_HEIGHT = HEIGHT - TITLE_BAR_HEIGHT - BUTTON_BAR; // обновляем высоту таблицы если изменится размер окна
+
     move_by_drag_titlebar();
 
     BeginDrawing();
@@ -78,10 +80,11 @@ void Framework::update() {
     }
 
     rlImGuiBegin();
-    // Принудительно отключаем DPI scaling: одинаковый UI размер на всех платформах.
+    // Принудительно отключаем DPI scaling: всегда 1:1.
     {
+        Vector2 dpiScale = GetWindowScaleDPI();
         ImGuiIO& io = ImGui::GetIO();
-        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+        io.DisplayFramebufferScale = ImVec2(dpiScale.x, dpiScale.y);
     }
 
     // Убираем внутренние отступы окна в ноль
@@ -102,9 +105,9 @@ void Framework::update() {
 
             // Контент в основном окне
             const float content_top = TITLE_BAR_HEIGHT;
-            const float content_height = HEIGHT - content_top - DOWN_BUTTONS_FIELD;
+            const float content_height = HEIGHT - content_top - BUTTON_BAR;
             ImGui::SetCursorPosY(content_top);
-                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
                 ImGui::BeginChild("Content", ImVec2(0, content_height), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
                     if (work_state == WAITING_INPUT) {
                         draw_input_field();
@@ -129,9 +132,9 @@ void Framework::update() {
 
 
                 // Контент снизу с кнопками
-                ImGui::SetCursorPosY(HEIGHT-DOWN_BUTTONS_FIELD);
-                ImGui::BeginChild("Buttons", ImVec2(0, DOWN_BUTTONS_FIELD), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
-                    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15, 15));
+                ImGui::SetCursorPosY(HEIGHT-BUTTON_BAR);
+                ImGui::BeginChild("Buttons", ImVec2(0, BUTTON_BAR), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+                    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
                         if (work_state == WAITING_INPUT) {
                             continue_button();
                         } else if (work_state == SHOW_TABLE) {
@@ -157,24 +160,25 @@ Framework::~Framework() {
 
 void Framework::draw_titlebar() {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, TITLEBAR_COLOR);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
     ImGui::BeginChild("FakeTitleBarVisual", ImVec2(0, TITLE_BAR_HEIGHT), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
 
         // Заголовок тайтлбара
-        ImGui::PushFont(regular_font, 20.0f);
+        ImGui::PushFont(regular_font, 16.0f);
             ImGui::Text("Token Counter");
         ImGui::PopFont();
 
-        ImGui::SameLine(ImGui::GetWindowWidth() - CLOSE_BUTTON_WIDTH);
+        ImGui::SameLine(ImGui::GetWindowWidth() - TITLE_BAR_HEIGHT);
         ImGui::SetCursorPosY(0);
 
         // Стиль кнопки закрытия
         ImGui::PushStyleColor(ImGuiCol_Button, TITLEBAR_COLOR);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, CLOSE_BUTTON_ACTIVE_COLOR);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, CLOSE_BUTTON_HOVERED_COLOR);
-            if (ImGui::Button("✕", ImVec2(CLOSE_BUTTON_WIDTH, TITLE_BAR_HEIGHT))) {
+            if (ImGui::Button("✕", ImVec2(TITLE_BAR_HEIGHT, TITLE_BAR_HEIGHT))) {
                 work_state = SHOULD_CLOSE;
             }
         ImGui::PopStyleColor();
@@ -182,14 +186,14 @@ void Framework::draw_titlebar() {
         ImGui::PopStyleColor();
 
 
-        ImGui::SameLine(ImGui::GetWindowWidth() - CLOSE_BUTTON_WIDTH * 2);
+        ImGui::SameLine(ImGui::GetWindowWidth() - TITLE_BAR_HEIGHT * 2);
         ImGui::SetCursorPosY(0);
 
         // Стиль кнопки сворачивания
         ImGui::PushStyleColor(ImGuiCol_Button, TITLEBAR_COLOR);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, TITLEBAR_COLOR_HIGHLIGHTED);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, TITLEBAR_COLOR_ACTIVATED);
-            if (ImGui::Button("—", ImVec2(CLOSE_BUTTON_WIDTH, TITLE_BAR_HEIGHT))) {
+            if (ImGui::Button("—", ImVec2(TITLE_BAR_HEIGHT, TITLE_BAR_HEIGHT))) {
                 MinimizeWindow();
             }
         ImGui::PopStyleColor();
@@ -198,6 +202,7 @@ void Framework::draw_titlebar() {
 
     ImGui::EndChild();
 
+    ImGui::PopStyleVar();
     ImGui::PopStyleVar();
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
@@ -212,7 +217,7 @@ void Framework::move_by_drag_titlebar() {
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
         CheckCollisionPointRec(mousePos, titleBarRect))
     {
-        if (mousePos.x < (GetScreenWidth() - CLOSE_BUTTON_WIDTH)) { // Проверяем что не попали кнопку закрытия
+        if (mousePos.x < (GetScreenWidth() - TITLE_BAR_HEIGHT)) { // Проверяем что не попали кнопку закрытия
             isDragging = true;
             dragOffset = mousePos;
         }
@@ -237,7 +242,7 @@ void Framework::draw_input_field() {
     ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR);
     ImGui::PushStyleColor(ImGuiCol_Border, BASIC_COLOR_HIGHLIGHTED);
     ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
-        ImGui::SetNextItemWidth(-(OBSERVE_BUTTON_WIDTH + 8.0f)); // 8.0f = расстояние между полем и кнопкой
+        ImGui::SetNextItemWidth(-(OBSERVE_BUTTON_WIDTH + FRAME_PADDING_VEC.x));
             if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к директории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
                 dir_path = input_buffer;
                 work_state = JUST_INPUT;
@@ -252,11 +257,11 @@ void Framework::draw_progress_bar() {
     ImGui::PushStyleColor(ImGuiCol_FrameBg, TITLEBAR_COLOR);
     ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR);
         ImVec2 cursor_pos_before_progress_bar = ImGui::GetCursorPos();
-        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 30), "");
+        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 25), "");
 
         cursor_pos_before_progress_bar.y += 3;
         ImGui::SetCursorPos(cursor_pos_before_progress_bar);
-        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 30));
+        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 25));
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
@@ -266,12 +271,12 @@ void Framework::draw_table() {
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 3.0f));
     if (ImGui::BeginTable("my_table", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
     {
-        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 30.0f); // Колонка для кнопки раскрытия
+        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, TABLE_CELL_VEC.x); // Колонка для кнопки раскрытия
         ImGui::TableSetupColumn("Token");
-        ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 160.0f);
+        ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 130.0f);
         for (int i = 0; i < table.expandable_rows.size(); i++) {
             Table_row_expandable& row = table.expandable_rows[i];
-            ImGui::TableNextRow(0, 30.0f); // Высота строки
+            ImGui::TableNextRow(0, TABLE_CELL_VEC.y); // Высота строки
 
             // Рисуем кнопку в первой колонке
             ImGui::TableNextColumn();
@@ -281,7 +286,7 @@ void Framework::draw_table() {
                 ImGui::PushStyleColor(ImGuiCol_Button, TRANSPERENT);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SEMI_TRANSPERENT);
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, LIGTHER_TRANSPERENT);
-                    if (ImGui::Button(row.is_expanded ? "-" : "+", ImVec2(30.0f, 30.0f))) {
+                    if (ImGui::Button(row.is_expanded ? "-" : "+", TABLE_CELL_VEC)) {
                         row.is_expanded = !row.is_expanded;
                     }
                 ImGui::PopStyleColor();
@@ -302,7 +307,7 @@ void Framework::draw_table() {
             if (row.is_expanded) {
                 for (int j = 0; j < row.sub_types.size(); j++) {
                     ImGui::PushID(j);
-                    ImGui::TableNextRow(0, 30.0f); // Высота строки
+                    ImGui::TableNextRow(0, TABLE_CELL_VEC.y); // Высота строки
 
                     ImGui::TableNextColumn(); // скип колонки с кнопкой
                     std::string count_str = std::to_string(row.sub_count[j]);
@@ -340,9 +345,9 @@ void Framework::draw_check_box() {
     ImGui::GetStyle().FrameBorderSize = 0.0f;
 }
 void Framework::save_button() {
-    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-150.0f, ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
+    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - (BUTTON_SIZE.x + FRAME_PADDING_VEC.x), ImGui::GetWindowHeight()-(BUTTON_SIZE.y + FRAME_PADDING_VEC.y)));
 
-    if (ImGui::Button("Сохранить", ImVec2(130, 40))) {
+    if (ImGui::Button("Сохранить", BUTTON_SIZE)) {
         open_save_dialog();
     }
     if (save_dialog) {
@@ -350,9 +355,9 @@ void Framework::save_button() {
     }
 }
 void Framework::back_button() {
-    ImGui::SetCursorPos(ImVec2(15.0f, ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
+    ImGui::SetCursorPos(ImVec2(FRAME_PADDING_VEC.x, ImGui::GetWindowHeight()-(BUTTON_SIZE.y + FRAME_PADDING_VEC.y)));
 
-    if (ImGui::Button("Назад", ImVec2(130, 40))) {
+    if (ImGui::Button("Назад", BUTTON_SIZE)) {
         work_state = WAITING_INPUT;
         input_is_correct = true;
     }
@@ -368,8 +373,8 @@ void Framework::observe_button() {
     // ImGui::PopStyleColor();
 }
 void Framework::continue_button() {
-    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-(145.0f+FRM_PDDNG), ImGui::GetWindowHeight()-(55.0f+FRM_PDDNG)));
-    if (ImGui::Button("Далее", ImVec2(130, 40))) {
+    ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-(BUTTON_SIZE.x+FRAME_PADDING_VEC.x), ImGui::GetWindowHeight()-(BUTTON_SIZE.y+FRAME_PADDING_VEC.y)));
+    if (ImGui::Button("Далее", BUTTON_SIZE)) {
         dir_path = input_buffer;
         work_state = JUST_INPUT;
         check_box_flag = cpp + 2*h + 4*hpp;

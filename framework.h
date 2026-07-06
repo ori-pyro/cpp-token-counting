@@ -23,15 +23,15 @@ enum Work_state {WAITING_INPUT, JUST_INPUT, WORK_IN_PROGRESS, SHOULD_CLOSE, SHOW
 
 class Framework {
 public:
-    const float WIDTH = 800.0f;
-    const float HEIGHT = 500.0f;
-    const float TITLE_BAR_HEIGHT = 40.0f;
-    const float DOWN_BUTTONS_FIELD = 86.0f;
-    const float TABLE_HEIGHT = HEIGHT - TITLE_BAR_HEIGHT - DOWN_BUTTONS_FIELD;
-
-    const float CLOSE_BUTTON_WIDTH = 40.0f;
-    const float OBSERVE_BUTTON_WIDTH = 80.0f;
-    const float FRM_PDDNG = 8.0f;
+    float WIDTH                 = 600.0f;
+    float HEIGHT                = 400.0f;
+    float TITLE_BAR_HEIGHT      = 30.0f;
+    float BUTTON_BAR            = 60.0f;
+    float TABLE_HEIGHT          = HEIGHT - TITLE_BAR_HEIGHT - BUTTON_BAR;
+    float OBSERVE_BUTTON_WIDTH  = 80.0f;
+    ImVec2 FRAME_PADDING_VEC    = { 10.0f, 10.0f };
+    ImVec2 BUTTON_SIZE          = { 100.0f, 40.0f };
+    ImVec2 TABLE_CELL_VEC       = { 24.0f, 24.0f };
 
     // ЦВЕТА
     const ImVec4 BASIC_COLOR = ImVec4(36.0/255.0f, 39/255.0f, 58/255.0f, 1.0f);
