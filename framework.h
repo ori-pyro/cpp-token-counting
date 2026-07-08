@@ -68,6 +68,7 @@ public:
     Vector2 dragOffset;
 
     Work_state work_state = WAITING_INPUT;
+    std::string error_massege;
 
     std::string progress_bar_text = "";
     float progress_bar_fraction;
@@ -98,6 +99,6 @@ public:
         const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_type
     );
 
-    void incorrect_input();
+    void incorrect_input(std::string);
     void draw_error_message();
 };

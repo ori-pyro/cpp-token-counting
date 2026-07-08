@@ -19,6 +19,7 @@ void open_save_dialog() {
 }
 
 void save_dialog_update(
+    const std::string project_path,
     const std::map<std::string, int>& types,
     const std::map<std::string, std::map<std::string, int>>& sub_types)
 {
@@ -26,14 +27,18 @@ void save_dialog_update(
         std::filesystem::path save_path = save_dialog->result();
         if (!save_path.empty()) {
             std::ofstream file(save_path);
+            file << "\nProject: " << project_path << "\n\n";
             for (auto& [type, cnt] : types) {
-                file << type << "; " << cnt << '\n';
+                file << std::left << std::setw(30) << type
+                    << std::right << std::setw(10) << cnt << "\n";
                 if (sub_types.contains(type)) {
                     for (auto& [sub_type, sub_cnt] : sub_types.at(type)) {
-                        file << '\t' << sub_type << "; " << sub_cnt << '\n';
+                        file << '\t' << std::left << std::setw(30) << sub_type
+                            << std::right << std::setw(10) << sub_cnt << "\n";
                     }
                 }
             }
+
         }
         save_dialog.reset();
     }

@@ -1,4 +1,5 @@
 #include "imgui.h"                  // Фреймворк
+#include "imgui_internal.h"
 #include "raylib.h"                 // Бэкенд для ImGui
 #include "rlImGui.h"                // Мостик между RayLib и ImGui
 #include "JetBrainsMono.h"          // Подключаем шрифт
@@ -115,6 +116,13 @@ void Framework::update() {
                         // Кнопка Обзор
                         ImGui::SameLine();
                         observe_button();
+
+                        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+                        ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
+                            ImGui::Text("! URL запрос может быть прерван со сторны GitHub,");
+                            ImGui::Text("  если проект слишком большой.");
+                            ImGui::Text("  Для анализа больших проектов рекомендуется скачать их.");
+                        ImGui::PopStyleColor();
 
                         draw_check_box();
 
@@ -243,10 +251,11 @@ void Framework::draw_input_field() {
     ImGui::PushStyleColor(ImGuiCol_Border, BASIC_COLOR_HIGHLIGHTED);
     ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
         ImGui::SetNextItemWidth(-(OBSERVE_BUTTON_WIDTH + FRAME_PADDING_VEC.x));
-            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите путь к директории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
+            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите URL или путь к локальной директории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
                 dir_path = input_buffer;
                 work_state = JUST_INPUT;
             }
+
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
@@ -334,7 +343,7 @@ void Framework::draw_table() {
 }
 
 void Framework::draw_check_box() {
-    ImGui::Dummy(ImVec2(0.0f, 20.0f));
+    ImGui::Dummy(ImVec2(0.0f, 15.0f));
 
     ImGui::GetStyle().FrameBorderSize = 1.5f;
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -351,7 +360,7 @@ void Framework::save_button() {
         open_save_dialog();
     }
     if (save_dialog) {
-        save_dialog_update(types, sub_types);
+        save_dialog_update(dir_path, types, sub_types);
     }
 }
 void Framework::back_button() {
@@ -360,6 +369,7 @@ void Framework::back_button() {
     if (ImGui::Button("Назад", BUTTON_SIZE)) {
         work_state = WAITING_INPUT;
         input_is_correct = true;
+        error_massege = "";
     }
 }
 void Framework::observe_button() {
@@ -418,9 +428,10 @@ void Framework::set_table(
     }
 }
 
-void Framework::incorrect_input() {
+void Framework::incorrect_input(std::string new_error_massege) {
     input_is_correct = false;
+    error_massege = new_error_massege;
 }
 void Framework::draw_error_message() {
-    ImGui::Text(" Ошибка: Некорректный ввод");
+    ImGui::InputText("##error_text", &error_massege, ImGuiInputTextFlags_ReadOnly);
 }

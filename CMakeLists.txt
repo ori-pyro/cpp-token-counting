@@ -6,8 +6,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build libraries statically" FORCE)
 set(RE2_BUILD_TESTING OFF CACHE BOOL "Disable RE2 testing" FORCE)
+
+set(CPR_BUILD_TESTS OFF CACHE BOOL "Disable CPR tests" FORCE)
+set(CPR_BUILD_TESTS_SSL OFF CACHE BOOL "Disable CPR SSL tests" FORCE)
+set(CPR_BUILD_TESTS_PROXY OFF CACHE BOOL "Disable CPR proxy tests" FORCE)
+
+set(BUILD_TESTING OFF CACHE BOOL "Disable curl testing" FORCE)
+
+set(CPR_CURL_USE_LIBPSL OFF CACHE BOOL "Disable curl libpsl" FORCE)
+set(CPR_USE_SYSTEM_LIB_PSL OFF CACHE BOOL "Disable libpsl" FORCE)
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build libraries statically" FORCE)
+
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
@@ -43,12 +54,26 @@ FetchContent_Declare(
     GIT_TAG        2025-11-05
 )
 
+FetchContent_Declare(
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.12.0
+)
+
+FetchContent_Declare(
+    cpr
+    GIT_REPOSITORY https://github.com/libcpr/cpr.git
+    GIT_TAG        1.14.2
+)
+
 FetchContent_MakeAvailable(
     portable-file-dialogs
     raylib
     imgui
     rlimgui
     re2
+    json
+    cpr
 )
 
 add_library(portable-file-dialogs INTERFACE)
@@ -78,24 +103,35 @@ set(MAIN_SOURCES
     parser.cpp
     parser.h
 )
-
 add_executable(token_counter ${MAIN_SOURCES} )
+if(NOT DEFINED GITHUB_TOKEN)
+  message(WARNING "GITHUB_TOKEN не задан. Передай его через -DGITHUB_TOKEN=...")
+endif()
+target_compile_definitions(token_counter PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}") # добавляем github api ключ
 target_link_libraries(token_counter PRIVATE
     rlimgui_lib
     imgui
     re2::re2
     raylib
     portable-file-dialogs
+    nlohmann_json::nlohmann_json
+    cpr::cpr
 )
 
 if(UNIX AND NOT APPLE)
   add_executable(token_counter_linux ${MAIN_SOURCES})
+  if(NOT DEFINED GITHUB_TOKEN)
+    message(WARNING "GITHUB_TOKEN не задан. Передай его через -DGITHUB_TOKEN=...")
+  endif()
+  target_compile_definitions(token_counter_linux PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}") # добавляем github api ключ
   target_link_libraries(token_counter_linux PRIVATE
         rlimgui_lib
         imgui
         re2::re2
         raylib
         portable-file-dialogs
+        nlohmann_json::nlohmann_json
+        cpr::cpr
     )
   set_target_properties(token_counter_linux PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
