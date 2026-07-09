@@ -64,10 +64,10 @@ void Parser::parser(std::string& text) {
                 need_to_check_prev_token = false;
                	prev = rest.data();
             } else {
-                    detailedTokens["operator-or-punctuator"][separator]++;
-                }
+                detailedTokens["operator-or-punctuator"][separator]++;
             }
         }
+
 
         if (rest.empty()) break;
 
