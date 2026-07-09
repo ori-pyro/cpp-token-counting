@@ -22,15 +22,15 @@ void Parser::parser(std::string& text) {
         if (need_to_check_prev_token) {
             std::string token(prev, start - prev);
             // std::cout << "tok: " << token << std::endl;
-            auto it = keywords.find(token);
-            if (it != keywords.end()) {
-                detailedTokens["keyword"][it->second]++;
+            auto it = detailedTokens["keyword"].find(token);
+            if (it != detailedTokens["keyword"].end()) {
+                detailedTokens["keyword"][it->first]++;
                 if (token == "true" || token == "false") {
                     detailedTokens["literal"]["boolean-literal"]++;
                 } else if (token == "nullptr") {
                     detailedTokens["literal"]["pointer-literal"]++;
                 }
-                else if (it->second == "alternative-tokens-keyword"){
+                else if (operators.contains(it->first)){
                     detailedTokens["operator-or-punctuator"][it->first]++;
                 }
             }
@@ -44,7 +44,7 @@ void Parser::parser(std::string& text) {
 
         // Разделитель (operator-or-punctuator)
         if(separator.find('\n') != std::string::npos){
-            tokens["lines"]++;
+            tokens["line"]++;
         }
         else if (!(separator.starts_with(" ") || separator.starts_with("\t")
             || separator == ")" || separator == "]" || separator == "}"
@@ -53,13 +53,13 @@ void Parser::parser(std::string& text) {
         ) {
             if (separator == "//" || separator == "#") {
                 if(separator == "//"){
-                    tokens["comments"]++;
+                    tokens["comment"]++;
                 }
                 skip_to_end_of_line();
                 need_to_check_prev_token = false;
                	prev = rest.data();
             } else if (separator == "/*") {
-                tokens["comments"]++;
+                tokens["comment"]++;
                 skip_multy_comment();
                 need_to_check_prev_token = false;
                	prev = rest.data();
@@ -154,7 +154,7 @@ void Parser::character_analyze() {
 
 void Parser::skip_to_end_of_line() {
     RE2::FindAndConsume(&rest, end_of_line);
-    tokens["lines"]++;
+    tokens["line"]++;
 }
 
 void Parser::skip_multy_comment() {
