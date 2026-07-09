@@ -52,8 +52,10 @@ void Parser::parser(std::string& text) {
             || separator.empty())
         ) {
             if (separator == "//" || separator == "#") {
-                if(separator == "//"){
+                if (separator == "//") {
                     tokens["comment"]++;
+                } else if (separator == "#") {
+                    detailedTokens["operator-or-punctuator"]["#"]++;
                 }
                 skip_to_end_of_line();
                 need_to_check_prev_token = false;

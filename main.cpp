@@ -1,9 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <string>
 #include <thread>
 #include <atomic>
-#include <chrono>
 #include <unordered_map>
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
@@ -35,6 +35,11 @@ unordered_map<string, unordered_map<string, int>> detailedTokens;
 
 bool has_error = false;
 string error_massege;
+
+int count_of_files;
+int cpp_cnt = 0;
+int h_cnt = 0;
+int hpp_cnt = 0;
 
 bool error_check(cpr::Response& response) {
     // Ошибки сети
@@ -92,7 +97,9 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
             fs::path extension = fs::path(tree["path"]).extension();
 
             bool chosen_extention = check_box_flag & ((extension == ".cpp") + (extension == ".h")*2 + (extension == ".hpp")*4);
-
+            if (extension == ".cpp") { cpp_cnt++; }
+            else if (extension == ".h") { h_cnt++; }
+            else if (extension == ".hpp") { hpp_cnt++; }
             if (chosen_extention) {
                 cpr::Url blob_text_url = "https://raw.githubusercontent.com/" +
                                         dir_url.substr(19) + "/" +
@@ -108,7 +115,7 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
     }
 
     int curr_file_number = 0;
-    int count_of_files = files_to_download.size();
+    count_of_files = files_to_download.size();
 
     // 4. Качаем пачками
     for (size_t i = 0; i < files_to_download.size(); i += BATCH_SIZE) {
@@ -128,9 +135,9 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
 
             curr_file_number++;
             progress_bar_fraction_atomic = static_cast<float>(curr_file_number) / count_of_files;
-
-            size_t copy_size = std::min(file_name.size(), sizeof(shared_file_name_buffer) - 1);
-            memcpy(shared_file_name_buffer, file_name.data(), copy_size);
+            std::string file_name_and_fraction = to_string(curr_file_number) + "/" + to_string(count_of_files) + " " + file_name;
+            size_t copy_size = std::min(file_name_and_fraction.size(), sizeof(shared_file_name_buffer) - 1);
+            memcpy(shared_file_name_buffer, file_name_and_fraction.data(), copy_size);
             shared_file_name_buffer[copy_size] = '\0';
             file_name_updated = true;
 
@@ -147,6 +154,11 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
     tokens = parser.tokens;
     detailedTokens = parser.detailedTokens;
 
+    tokens[".cpp"] = cpp_cnt;
+    tokens[".h"] = h_cnt;
+    tokens[".hpp"] = hpp_cnt;
+
+
     parser.clear_table();
 
     work_state_atomic = SHOW_TABLE;
@@ -157,12 +169,16 @@ void token_counting_offline(std::string dir_path, uint8_t check_box_flag) {
 
     Parser parser;
 
-    // Подсчёт общего количества файлов для прогрессбара
-    int count_of_files = 0;
+    // Подсчёт общего количества файлов
+    count_of_files = 0;
     int curr_file_number = 0;
+
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
         fs::path extension = entry.path().extension();
         bool chosen_extention = check_box_flag & ((extension == ".cpp") + (extension == ".h")*2 + (extension == ".hpp")*4);
+        if (extension == ".cpp") { cpp_cnt++; }
+        else if (extension == ".h") { h_cnt++; }
+        else if (extension == ".hpp") { hpp_cnt++; }
         if (chosen_extention) {
             count_of_files++;
         }
@@ -177,7 +193,7 @@ void token_counting_offline(std::string dir_path, uint8_t check_box_flag) {
             // Передаём в прогрессбар инфу
             curr_file_number++;
             progress_bar_fraction_atomic = static_cast<float>(curr_file_number)/count_of_files;
-            std::string file_name = entry.path().filename().string();
+            std::string file_name = to_string(curr_file_number) + "/" + to_string(count_of_files) + " " + entry.path().filename().string();
             size_t copy_size = std::min(file_name.size(), sizeof(shared_file_name_buffer) - 1);
             memcpy(shared_file_name_buffer, file_name.data(), copy_size);
             shared_file_name_buffer[copy_size] = '\0'; // Строка обязана заканчиваться нулем
@@ -197,6 +213,10 @@ void token_counting_offline(std::string dir_path, uint8_t check_box_flag) {
     // копируем
     tokens = parser.tokens;
     detailedTokens = parser.detailedTokens;
+
+    tokens[".cpp"] = cpp_cnt;
+    tokens[".h"] = h_cnt;
+    tokens[".hpp"] = hpp_cnt;
 
     parser.clear_table();
 
