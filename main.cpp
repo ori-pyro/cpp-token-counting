@@ -36,10 +36,6 @@ unordered_map<string, unordered_map<string, int>> detailedTokens;
 bool has_error = false;
 string error_massege;
 
-int count_of_files;
-int cpp_cnt = 0;
-int h_cnt = 0;
-int hpp_cnt = 0;
 
 bool error_check(cpr::Response& response) {
     // Ошибки сети
@@ -90,6 +86,10 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
     std::vector<std::pair<std::string, std::string>> files_to_download;
     const size_t BATCH_SIZE = 20;
 
+    int cpp_cnt = 0;
+    int h_cnt = 0;
+    int hpp_cnt = 0;
+
     // 3. Собираем все URL для скачивания
     for (auto& tree: git_repos_git_tree_json["tree"]) {
         if (tree["type"] == "blob") {
@@ -115,7 +115,8 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
     }
 
     int curr_file_number = 0;
-    count_of_files = files_to_download.size();
+
+    int count_of_files = files_to_download.size();
 
     // 4. Качаем пачками
     for (size_t i = 0; i < files_to_download.size(); i += BATCH_SIZE) {
@@ -170,7 +171,10 @@ void token_counting_offline(std::string dir_path, uint8_t check_box_flag) {
     Parser parser;
 
     // Подсчёт общего количества файлов
-    count_of_files = 0;
+    int cpp_cnt = 0;
+    int h_cnt = 0;
+    int hpp_cnt = 0;
+    int count_of_files = 0;
     int curr_file_number = 0;
 
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
