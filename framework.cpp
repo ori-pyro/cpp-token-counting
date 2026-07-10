@@ -432,6 +432,7 @@ void Framework::set_table(
 void Framework::incorrect_input(std::string new_error_massege) {
     input_is_correct = false;
     error_massege = new_error_massege;
+    work_state = WAITING_INPUT;
 }
 void Framework::draw_error_message() {
     ImGui::InputText("##error_text", &error_massege, ImGuiInputTextFlags_ReadOnly);
