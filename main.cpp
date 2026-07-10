@@ -36,6 +36,43 @@ unordered_map<string, unordered_map<string, int>> detailedTokens;
 bool has_error = false;
 string error_massege;
 
+bool cpp = false;
+bool cc = false;
+bool cxx = false;
+bool h = false;
+bool hpp = false;
+bool hh = false;
+bool hxx = false;
+
+int cpp_cnt = 0;
+int cc_cnt = 0;
+int cxx_cnt = 0;
+int h_cnt = 0;
+int hpp_cnt = 0;
+int hh_cnt = 0;
+int hxx_cnt = 0;
+
+bool is_chosen(const std::string& extension) {
+    if ((extension == ".cpp") && cpp)      { cpp_cnt++; return true; }
+    else if ((extension == ".cc") && cc)   { cc_cnt++; return true; }
+    else if ((extension == ".cxx") && cxx) { cxx_cnt++; return true; }
+    else if ((extension == ".h") && h)     { h_cnt++; return true; }
+    else if ((extension == ".hpp") && hpp) { hpp_cnt++; return true; }
+    else if ((extension == ".hh") && hh)   { hh_cnt++; return true; }
+    else if ((extension == ".hxx") && hxx) { hxx_cnt++; return true; }
+    return false;
+}
+
+void update_files_count() {
+    tokens["file"] = cpp_cnt + cc_cnt + cxx_cnt + h_cnt + hpp_cnt + hpp_cnt + hh_cnt + hxx_cnt;
+    detailedTokens["file"][".cpp"] = cpp_cnt;
+    detailedTokens["file"][".cc"] = cc_cnt;
+    detailedTokens["file"][".cxx"] = cxx_cnt;
+    detailedTokens["file"][".h"] = h_cnt;
+    detailedTokens["file"][".hpp"] = hpp_cnt;
+    detailedTokens["file"][".hh"] = hh_cnt;
+    detailedTokens["file"][".hxx"] = hxx_cnt;
+}
 
 bool error_check(cpr::Response& response) {
     // Ошибки сети
@@ -58,7 +95,7 @@ bool error_check(cpr::Response& response) {
     }
 }
 
-void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
+void token_counting_online(std::string dir_url) {
     Parser parser;
 
     // TODO Сделать валидацию URL черещ re2
@@ -86,21 +123,14 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
     std::vector<std::pair<std::string, std::string>> files_to_download;
     const size_t BATCH_SIZE = 20;
 
-    int cpp_cnt = 0;
-    int h_cnt = 0;
-    int hpp_cnt = 0;
 
     // 3. Собираем все URL для скачивания
     for (auto& tree: git_repos_git_tree_json["tree"]) {
         if (tree["type"] == "blob") {
             fs::path entry_path(tree["path"]);
-            fs::path extension = fs::path(tree["path"]).extension();
+            std::string extension = fs::path(tree["path"]).extension().string();
 
-            bool chosen_extention = check_box_flag & ((extension == ".cpp") + (extension == ".h")*2 + (extension == ".hpp")*4);
-            if (extension == ".cpp") { cpp_cnt++; }
-            else if (extension == ".h") { h_cnt++; }
-            else if (extension == ".hpp") { hpp_cnt++; }
-            if (chosen_extention) {
+            if (is_chosen(extension)) {
                 cpr::Url blob_text_url = "https://raw.githubusercontent.com/" +
                                         dir_url.substr(19) + "/" +
                                         repos_default_branch + "/" +
@@ -155,10 +185,7 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
     tokens = parser.tokens;
     detailedTokens = parser.detailedTokens;
 
-    tokens[".cpp"] = cpp_cnt;
-    tokens[".h"] = h_cnt;
-    tokens[".hpp"] = hpp_cnt;
-
+    update_files_count();
 
     parser.clear_table();
 
@@ -166,33 +193,26 @@ void token_counting_online(std::string dir_url, uint8_t check_box_flag) {
     has_error = false;
 }
 
-void token_counting_offline(std::string dir_path, uint8_t check_box_flag) {
+void token_counting_offline(std::string dir_path) {
 
     Parser parser;
 
-    // Подсчёт общего количества файлов
-    int cpp_cnt = 0;
-    int h_cnt = 0;
-    int hpp_cnt = 0;
     int count_of_files = 0;
     int curr_file_number = 0;
 
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-        fs::path extension = entry.path().extension();
-        bool chosen_extention = check_box_flag & ((extension == ".cpp") + (extension == ".h")*2 + (extension == ".hpp")*4);
-        if (extension == ".cpp") { cpp_cnt++; }
-        else if (extension == ".h") { h_cnt++; }
-        else if (extension == ".hpp") { hpp_cnt++; }
-        if (chosen_extention) {
+        std::string extension = entry.path().extension().string();
+
+        if (is_chosen(extension)) {
             count_of_files++;
         }
     }
 
     // Проход по всем файлам
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-        fs::path extension = entry.path().extension();
-        bool chosen_extention = check_box_flag & ((extension == ".cpp") + (extension == ".h")*2 + (extension == ".hpp")*4);
-        if (chosen_extention) {
+        std::string extension = entry.path().extension().string();
+
+        if (is_chosen(extension)) {
 
             // Передаём в прогрессбар инфу
             curr_file_number++;
@@ -218,9 +238,7 @@ void token_counting_offline(std::string dir_path, uint8_t check_box_flag) {
     tokens = parser.tokens;
     detailedTokens = parser.detailedTokens;
 
-    tokens[".cpp"] = cpp_cnt;
-    tokens[".h"] = h_cnt;
-    tokens[".hpp"] = hpp_cnt;
+    update_files_count();
 
     parser.clear_table();
 
@@ -247,16 +265,24 @@ int main() {
         if (GUI.work_state == JUST_INPUT) {
             input_str = GUI.get_input();
 
+            cpp = GUI.cpp;
+            cc = GUI.cc;
+            cxx = GUI.cxx;
+            h = GUI.h;
+            hpp = GUI.hpp;
+            hh = GUI.hh;
+            hxx = GUI.hxx;
+
             // URL
             if (input_str.substr(0, 8) == "https://") {
-                std::thread analyzer(token_counting_online, input_str, GUI.check_box_flag);
+                std::thread analyzer(token_counting_online, input_str);
                 analyzer.detach();
                 GUI.work_state = WORK_IN_PROGRESS;
             }
             // Локальная папка
             else if (fs::exists(input_str)) {
                 fs::path local_path(input_str);
-                std::thread analyzer(token_counting_offline, local_path.string(), GUI.check_box_flag);
+                std::thread analyzer(token_counting_offline, local_path.string());
                 analyzer.detach();
                 GUI.work_state = WORK_IN_PROGRESS;
             }

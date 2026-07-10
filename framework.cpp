@@ -118,9 +118,8 @@ void Framework::update() {
 
                         ImGui::Dummy(ImVec2(0.0f, 15.0f));
                         ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
-                            ImGui::Text("! URL запрос может быть прерван со сторны GitHub,");
-                            ImGui::Text("  если проект слишком большой.");
-                            ImGui::Text("  Для анализа больших проектов рекомендуется скачать их.");
+                            ImGui::Text("! Анализ по URL намеренно замедлен,");
+                            ImGui::Text("  чтобы сервер не принял его за ddos атаку");
                         ImGui::PopStyleColor();
 
                         draw_check_box();
@@ -347,8 +346,12 @@ void Framework::draw_check_box() {
     ImGui::GetStyle().FrameBorderSize = 1.5f;
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Checkbox(".cpp", &cpp);
+        ImGui::Checkbox(".cc", &cc);
+        ImGui::Checkbox(".cxx", &cxx);
         ImGui::Checkbox(".h", &h);
         ImGui::Checkbox(".hpp", &hpp);
+        ImGui::Checkbox(".hh", &hh);
+        ImGui::Checkbox(".hxx", &hxx);
     ImGui::PopStyleVar();
     ImGui::GetStyle().FrameBorderSize = 0.0f;
 }
@@ -386,7 +389,6 @@ void Framework::continue_button() {
     if (ImGui::Button("Далее", BUTTON_SIZE)) {
         dir_path = input_buffer;
         work_state = JUST_INPUT;
-        check_box_flag = cpp + 2*h + 4*hpp;
     }
 }
 

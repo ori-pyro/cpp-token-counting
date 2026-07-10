@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <cstdint>
 #include <map>
 
 struct Table_row_expandable {
@@ -58,10 +57,13 @@ public:
     std::string dir_path = "";
     std::string input_buffer = "";
 
-    uint8_t check_box_flag = 0;
     bool cpp = false;
+    bool cc = false;
+    bool cxx = false;
     bool h = false;
     bool hpp = false;
+    bool hh = false;
+    bool hxx = false;
 
     bool isDragging;
     Rectangle titleBarRect;
