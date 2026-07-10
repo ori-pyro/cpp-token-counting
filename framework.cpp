@@ -1,5 +1,4 @@
 #include "imgui.h"                  // Фреймворк
-#include "imgui_internal.h"
 #include "raylib.h"                 // Бэкенд для ImGui
 #include "rlImGui.h"                // Мостик между RayLib и ImGui
 #include "JetBrainsMono.h"          // Подключаем шрифт

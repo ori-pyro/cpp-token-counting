@@ -104,10 +104,16 @@ set(MAIN_SOURCES
     parser.h
 )
 add_executable(token_counter ${MAIN_SOURCES} )
+target_compile_definitions(token_counter PRIVATE
+  GITHUB_TOKEN="${GITHUB_TOKEN}"
+)
+# Урезанный windows.h нужен только там, где сталкиваются raylib и cpr/curl
+set_source_files_properties(main.cpp PROPERTIES
+    COMPILE_DEFINITIONS "WIN32_LEAN_AND_MEAN;NOGDI;NOUSER;NOMINMAX"
+)
 if(NOT DEFINED GITHUB_TOKEN)
   message(WARNING "GITHUB_TOKEN не задан. Передай его через -DGITHUB_TOKEN=...")
 endif()
-target_compile_definitions(token_counter PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}") # добавляем github api ключ
 target_link_libraries(token_counter PRIVATE
     rlimgui_lib
     imgui
