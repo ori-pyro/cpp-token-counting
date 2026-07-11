@@ -391,18 +391,17 @@ void Framework::continue_button() {
     }
 }
 
-string Framework::get_input() {
+string Framework::getInput() const {
     return dir_path;
 }
 void Framework::set_progress_bar(float value) {
     progress_bar_fraction = value;
 }
-void Framework::set_table(
-    const std::unordered_map<std::string, int>& types_new,
-    const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_types_new) {
+void Framework::setTable(
+    const std::map<std::string, int>& types_new,
+    const std::map<std::string, std::map<std::string, int>>& sub_types_new) {
 
-
-    table = Table();
+    table = vectorTable();
 
     // Превращаем unordered_map в map для вывода в алфавитном порядке
     types.clear(); types.insert(types_new.begin(), types_new.end());

@@ -1,10 +1,11 @@
 #include "imgui.h"      // Фреймворк
 #include "raylib.h"     // Бэкенд для ImGui
+#include <memory>
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <cstdint>
 #include <map>
+#include <atomic>
 
 struct Table_row_expandable {
     std::string type = "";
@@ -14,10 +15,14 @@ struct Table_row_expandable {
     std::vector<int> sub_count;
 };
 
-struct Table {
+struct vectorTable {
     std::vector<Table_row_expandable> expandable_rows;
 };
 
+
+
+enum class Screen { InputScreen, LoadingScreen, TableScreen };
+enum class FrameworkEvent { Empty, ContinuePressed, BackPressed, SavePressed, BrowsePressed };
 
 enum Work_state {WAITING_INPUT, JUST_INPUT, WORK_IN_PROGRESS, SHOULD_CLOSE, SHOW_TABLE};
 
@@ -50,7 +55,7 @@ public:
     std::map<std::string, int> types;
     std::map<std::string, std::map<std::string, int>> sub_types;
 
-    Table table;
+    vectorTable table;
 
     ImFont* regular_font = nullptr;
     ImFont* small_font = nullptr;
@@ -63,20 +68,29 @@ public:
     bool h = false;
     bool hpp = false;
 
+    bool running = false;
+
     bool isDragging;
     Rectangle titleBarRect;
     Vector2 dragOffset;
+
+    std::atomic<Screen> screen;
+    std::atomic<FrameworkEvent> frameworkEvent;
 
     Work_state work_state = WAITING_INPUT;
     std::string error_massege;
 
     std::string progress_bar_text = "";
+    std::atomic<int> curr{ 0 };
+    std::atomic<int> total{ 0 };
+    std::atomic<std::shared_ptr<std::string>> filename;
     float progress_bar_fraction;
 
     bool input_is_correct = true;
 
     Framework();
     void update();
+    void loop();
     ~Framework();
 
     void draw_titlebar();
@@ -92,11 +106,17 @@ public:
     void observe_button();
     void continue_button();
 
-    std::string get_input();
+    std::string getInput() const;
+    Screen getScreen();
+    FrameworkEvent getEvent();
+
+    void setScreen(Screen);
+    void setProgressBarText(std::shared_ptr<std::string>);
+    void setErrorMassege(std::shared_ptr<std::string>);
     void set_progress_bar(float);
-    void set_table(
-        const std::unordered_map<std::string, int>& type,
-        const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_type
+    void setTable(
+        const std::map<std::string, int>& type,
+        const std::map<std::string, std::map<std::string, int>>& sub_type
     );
 
     void incorrect_input(std::string);

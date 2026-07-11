@@ -6,7 +6,7 @@
 #include <iostream>
 
 
-void Parser::parser(std::string& text) {
+void Parser::parse(std::string& text) {
     rest = re2::StringPiece(text);
    	const char* start = text.data();
    	const char* prev = start;
