@@ -22,6 +22,7 @@ void FileIterator::fillCurrentData() {
         }
     }
 }
+
 FileIterator& FileIterator::operator++() {
     ++dirIterator;
     while (dirIterator != endIterator && !chosen.check(dirIterator->path().extension().string())) {
@@ -37,6 +38,12 @@ FileIterator FileIterator::end() {
     FileIterator end = *this;
     end.dirIterator = endIterator;
     return end;
+}
+bool FileIterator::operator!=(const FileIterator& other) const {
+    return this->dirIterator != other.dirIterator;
+}
+bool FileIterator::operator==(const FileIterator& other) const {
+    return this->dirIterator == other.dirIterator;
 }
 FileData& FileIterator::operator*() {
     return data;
