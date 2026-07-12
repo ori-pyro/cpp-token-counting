@@ -3,9 +3,10 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <cstdint>
 #include <map>
 #include <atomic>
+#include "structures.h"
+
 
 struct Table_row_expandable {
     std::string type = "";
@@ -63,10 +64,8 @@ public:
     std::string dir_path = "";
     std::string input_buffer = "";
 
-    uint8_t check_box_flag = 0;
-    bool cpp = false;
-    bool h = false;
-    bool hpp = false;
+
+    ChosenExtensions chosen;
 
     bool running = false;
 
@@ -106,13 +105,17 @@ public:
     void observe_button();
     void continue_button();
 
-    std::string getInput() const;
+    std::string getInput();
     Screen getScreen();
     FrameworkEvent getEvent();
+    ChosenExtensions getExtensions();
+
+    void eventProcessed();
 
     void setScreen(Screen);
     void setProgressBarText(std::shared_ptr<std::string>);
     void setErrorMassege(std::shared_ptr<std::string>);
+    void setInput(std::string); // Принимает ввод из selectDialog. Должен быть потокобезопасным
     void set_progress_bar(float);
     void setTable(
         const std::map<std::string, int>& type,

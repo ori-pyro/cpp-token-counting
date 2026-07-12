@@ -9,6 +9,17 @@
 
 using namespace std;
 
+bool ChosenExtensions::check(const std::string& extension) {
+    if ((extension == ".cpp") && cpp) { return true; }
+    if ((extension == ".cc") && cc)   { return true; }
+    if ((extension == ".cxx") && cxx) { return true; }
+    if ((extension == ".h") && h)     { return true; }
+    if ((extension == ".hpp") && hpp) { return true; }
+    if ((extension == ".hh") && hh)   { return true; }
+    if ((extension == ".hxx") && hxx) { return true; }
+    return false;
+}
+
 Framework::Framework() {
         SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_HIGHDPI);
         InitWindow(WIDTH, HEIGHT, "Token Counter");
@@ -119,9 +130,8 @@ void Framework::update() {
 
                         ImGui::Dummy(ImVec2(0.0f, 15.0f));
                         ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
-                            ImGui::Text("! URL запрос может быть прерван со сторны GitHub,");
-                            ImGui::Text("  если проект слишком большой.");
-                            ImGui::Text("  Для анализа больших проектов рекомендуется скачать их.");
+                            ImGui::Text("! Анализ по URL намеренно замедлен,");
+                            ImGui::Text("  чтобы сервер не принял его за ddos атаку");
                         ImGui::PopStyleColor();
 
                         draw_check_box();
@@ -347,9 +357,13 @@ void Framework::draw_check_box() {
 
     ImGui::GetStyle().FrameBorderSize = 1.5f;
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::Checkbox(".cpp", &cpp);
-        ImGui::Checkbox(".h", &h);
-        ImGui::Checkbox(".hpp", &hpp);
+        ImGui::Checkbox(".cpp", &chosen.cpp);
+        ImGui::Checkbox(".cc", &chosen.cc);
+        ImGui::Checkbox(".cxx", &chosen.cxx);
+        ImGui::Checkbox(".h", &chosen.h);
+        ImGui::Checkbox(".hpp", &chosen.hpp);
+        ImGui::Checkbox(".hh", &chosen.hh);
+        ImGui::Checkbox(".hxx", &chosen.hxx);
     ImGui::PopStyleVar();
     ImGui::GetStyle().FrameBorderSize = 0.0f;
 }
@@ -379,19 +393,16 @@ void Framework::observe_button() {
     if (select_dialog) {
         select_dialog_update(input_buffer); // обновляет input_buffer
     }
-    // ImGui::PopStyleColor();
-    // ImGui::PopStyleColor();
 }
 void Framework::continue_button() {
     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-(BUTTON_SIZE.x+FRAME_PADDING_VEC.x), ImGui::GetWindowHeight()-(BUTTON_SIZE.y+FRAME_PADDING_VEC.y)));
     if (ImGui::Button("Далее", BUTTON_SIZE)) {
         dir_path = input_buffer;
         work_state = JUST_INPUT;
-        check_box_flag = cpp + 2*h + 4*hpp;
     }
 }
 
-string Framework::getInput() const {
+string Framework::getInput() {
     return dir_path;
 }
 void Framework::set_progress_bar(float value) {
@@ -400,6 +411,7 @@ void Framework::set_progress_bar(float value) {
 void Framework::setTable(
     const std::map<std::string, int>& types_new,
     const std::map<std::string, std::map<std::string, int>>& sub_types_new) {
+
 
     table = vectorTable();
 
@@ -430,6 +442,7 @@ void Framework::setTable(
 void Framework::incorrect_input(std::string new_error_massege) {
     input_is_correct = false;
     error_massege = new_error_massege;
+    work_state = WAITING_INPUT;
 }
 void Framework::draw_error_message() {
     ImGui::InputText("##error_text", &error_massege, ImGuiInputTextFlags_ReadOnly);

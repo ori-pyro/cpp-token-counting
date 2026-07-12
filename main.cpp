@@ -30,8 +30,6 @@ void work(Parser& parser, std::shared_ptr<FileIterator> fileIterator, Framework&
         gui.filename.store(std::move(iter.filename));
     }
     is_work_finished.store(true);
-
-
 }
 
 int main() {
@@ -53,46 +51,68 @@ int main() {
         switch (gui.getScreen()) {
             // ЭКРАН ВВОДА
             case Screen::InputScreen: {
-                switch (gui.getEvent()) {
-                    // НАЖАТА ПРОДОЛЖИТЬ
-                    case FrameworkEvent::ContinuePressed: {
-                        fileManager.recognizeInput(gui.getInput());
-                        switch (fileManager.getEvent()) {
-                            // РАСПОЗНАН ПУТЬ К ПАПКЕ
-                            case FileManagerEvent::PathEnterd: {
-                                std::thread reposScanThread(&FileManager::startPathScan, &fileManager);
-                                reposScanThread.detach();
-
-                                gui.setScreen(Screen::LoadingScreen);
-                                gui.setProgressBarText(std::make_shared<std::string>("Подготовка..."));
-                                break;
-                            }
-                            // РАСПОЗНАНА ССЫЛКА НА ГИТХАБ
-                            case FileManagerEvent::URLEntered: {
-                                std::thread reposScanThread(&FileManager::startURLScan, &fileManager);
-                                reposScanThread.detach();
-
-                                gui.setScreen(Screen::LoadingScreen);
-                                gui.setProgressBarText(std::make_shared<std::string>("Подготовка..."));
-                                break;
-                            }
-                            // НЕКОРРЕКТНЫЙ ВВОД
-                            case FileManagerEvent::IncorrectEntered: {
-                                gui.setErrorMassege(fileManager.getErrorMassege());
-                                break;
-                            }
-                            default: { break; }
+                switch(fileManager.getEvent()) {
+                    // ОТКРЫТО ОКНО ВЫБОРА ПАПКИ
+                    case FileManagerEvent::BrowseDialogOpened: {
+                        if (fileManager.updateBrowseDialog()) {
+                            gui.setInput(fileManager.getPath());
+                            fileManager.eventProcessed(); // сбраысваем любые ивенты от gui
                         }
                         break;
                     }
-                    // НАЖАТА ОБЗОР
-                    case FrameworkEvent::BrowsePressed: {
-                        // ... Запуск даилога выбора папки
+                    // ОКНО ВЫБОРА ПАПКИ НЕ ОТКРЫТО => обрабатываем ввод
+                    default: {
+                        switch (gui.getEvent()) {
+                            // НАЖАТА ПРОДОЛЖИТЬ
+                            case FrameworkEvent::ContinuePressed: {
+                                fileManager.setExtensions(gui.getExtensions());
+                                fileManager.recognizeInput(gui.getInput());
+                                switch (fileManager.getEvent()) {
+                                    // РАСПОЗНАН ПУТЬ К ПАПКЕ
+                                    case FileManagerEvent::PathEnterd: {
+                                        std::thread reposScanThread(&FileManager::startPathScan, &fileManager);
+                                        reposScanThread.detach();
 
-                        break;
+                                        gui.setScreen(Screen::LoadingScreen);
+                                        gui.setProgressBarText(std::make_shared<std::string>("Подготовка..."));
+                                        fileManager.eventProcessed();
+                                        break;
+                                    }
+                                    // РАСПОЗНАНА ССЫЛКА НА ГИТХАБ
+                                    case FileManagerEvent::URLEntered: {
+                                        std::thread reposScanThread(&FileManager::startURLScan, &fileManager);
+                                        reposScanThread.detach();
+
+                                        gui.setScreen(Screen::LoadingScreen);
+                                        gui.setProgressBarText(std::make_shared<std::string>("Подготовка..."));
+                                        fileManager.eventProcessed();
+                                        break;
+                                    }
+                                    // НЕКОРРЕКТНЫЙ ВВОД
+                                    case FileManagerEvent::IncorrectEntered: {
+                                        gui.setErrorMassege(fileManager.getErrorMassege());
+                                        fileManager.eventProcessed();
+                                        break;
+                                    }
+                                    default: { break; }
+                                }
+
+                                // Обработали ивент, сообщаем об этом gui
+                                gui.eventProcessed();
+                                break;
+                            }
+                            // НАЖАТА ОБЗОР
+                            case FrameworkEvent::BrowsePressed: {
+                                fileManager.openBrowseDialog();
+                                // ... Запуск даилога выбора папки
+
+                                gui.eventProcessed();
+                                break;
+                            }
+                        }
                     }
-                    default: { break; } // Ничего не делаем
                 }
+
 
                 break;
             }
@@ -102,19 +122,20 @@ int main() {
                 if (is_work_finished) {
                     // Загружаем результаты в таблицу
 
-                    // 1. Берём таблицу из parser
+                    // Берём таблицу из parser
                     std::shared_ptr<std::map<std::string, int>> tokens = parser.getTokens();
                     std::shared_ptr<std::map<std::string, std::map<std::string, int>>> detailedTokens = parser.getDetailedTokens();
-                    // 2. Добавляем инфу из fileManager
+                    // Добавляем инфу из fileManager
                     (*tokens)["file"] = fileIterator.load()->total;
                     (*detailedTokens)["file"] = fileManager.getExtensionCount();
-                    // 3. Загружаем в таблицу
+                    // Загружаем в таблицу
                     table.rows.store(tokens);
                     table.sub_rows.store(detailedTokens);
-                    // 4. Передаём в gui
+                    // Передаём в gui
                     gui.setTable(*table.rows.load(), *table.sub_rows.load());
 
                     gui.setScreen(Screen::TableScreen);
+                    fileManager.eventProcessed();
                     break;
                 }
 
@@ -127,7 +148,7 @@ int main() {
                         std::thread parserThread(work, std::ref(parser), fileIterator.load(), std::ref(gui), std::ref(is_work_finished));
                         parserThread.detach();
 
-                        fileManager.setEvent(FileManagerEvent::Working);
+                        fileManager.eventProcessed();
                         break;
                     }
                     // ВЫВОДИМ СОСТОЯНИЕ РАБОТЫ
@@ -137,33 +158,42 @@ int main() {
                         break;
                     }
                 }
-
-
                 break;
             }
             // ЭКРАН ТАБЛИЦЫ
             case Screen::TableScreen: {
-                switch(gui.getEvent()) {
-                    case FrameworkEvent::SavePressed: {
-
-
+                switch(fileManager.getEvent()) {
+                    // ОКНО СОХРАНЕНИЯ ОТКРЫТО
+                    case FileManagerEvent::SaveDialogOpened: {
+                        if (fileManager.updateSaveDialog()) {
+                            fileManager.save(*table.rows.load(), *table.sub_rows.load());
+                            fileManager.eventProcessed();
+                        }
                         break;
                     }
-                    case FrameworkEvent::BackPressed: {
-                        gui.setScreen(Screen::InputScreen);
-                        // ... Чистим таблицу и прогресс бар и вообще всё чистим на всякий случай
-                        break;
+                    // ОКНО СОХРАНЕНИЯ НЕ ОТКРЫТО => обрабатываем ввод
+                    default: {
+                        switch(gui.getEvent()) {
+                            case FrameworkEvent::SavePressed: {
+                                fileManager.openSaveDialog();
+
+                                gui.eventProcessed();
+                                break;
+                            }
+                            case FrameworkEvent::BackPressed: {
+                                gui.setScreen(Screen::InputScreen);
+                                is_work_finished.store(false);
+                                // TODO Чистим таблицу и прогресс бар и вообще всё чистим на всякий случай
+                                gui.eventProcessed();
+                                break;
+                            }
+                        }
                     }
                 }
-
-                // ...
 
                 break;
             }
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // просто ждём, чтобы не перегрузить процессор
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // просто ждём, чтобы не перегрузить процессор
 }
-
-
-// TODO Передача расширений из gui в fileManager
