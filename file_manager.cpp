@@ -74,6 +74,9 @@ void FileManager::recognizeInput(const std::string& input_str) {
         event.store(FileManagerEvent::IncorrectEntered);
     }
 }
+void FileManager::eventProcessed() {
+    event = FileManagerEvent::Empty;
+}
 
 void FileManager::setExtensions(ChosenExtensions new_chosen) {
     chosen = new_chosen;
@@ -81,6 +84,9 @@ void FileManager::setExtensions(ChosenExtensions new_chosen) {
 
 std::string FileManager::getPath() {
     return path_or_url;
+}
+std::string FileManager::getSavePath() {
+    return save_path.string();
 }
 FileManagerEvent FileManager::getEvent() {
     return event;
@@ -102,11 +108,6 @@ std::shared_ptr<std::string> FileManager::getErrorMassege() {
 std::shared_ptr<FileIterator> FileManager::getFileIterator() {
     fileIterator = std::make_shared<FileIterator>(fs::path(path_or_url), chosen);
     return fileIterator;
-}
-
-
-void FileManager::eventProcessed() {
-    event = FileManagerEvent::Empty;
 }
 
 void FileManager::openBrowseDialog() {
@@ -151,7 +152,4 @@ void FileManager::save(const std::string& path,
             }
         }
     }
-}
-std::string FileManager::getSavePath() {
-    return save_path.string();
 }

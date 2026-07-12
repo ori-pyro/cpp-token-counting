@@ -50,22 +50,22 @@ struct FileIterator {
 
 
 class FileManager {
+    fs::path save_path;
+    std::string path_or_url = "";
     std::unique_ptr<pfd::save_file> save_dialog = nullptr;
     std::unique_ptr<pfd::select_folder> select_dialog = nullptr;
 
-    fs::path save_path;
-
-    std::atomic<FileManagerEvent> event;
-    std::atomic<std::shared_ptr<std::string>> errorString;
-    std::shared_ptr<FileIterator> fileIterator;
-    std::string path_or_url = "";
     ChosenExtensions chosen;
+    std::atomic<FileManagerEvent> event;
+    std::shared_ptr<FileIterator> fileIterator;
+    std::atomic<std::shared_ptr<std::string>> errorString;
 public:
     int total = 0;
 
     void startPathScan();
     void startURLScan();
     void recognizeInput(const std::string&);
+    void eventProcessed();
 
     void setExtensions(ChosenExtensions);
 
@@ -76,13 +76,11 @@ public:
     std::shared_ptr<std::string> getErrorMassege();
     std::shared_ptr<FileIterator> getFileIterator();
 
-    void eventProcessed();
 
     void openBrowseDialog();
     bool updateBrowseDialog();
     void openSaveDialog();
     bool updateSaveDialog();
-
     void save(const std::string& path,
               const std::map<std::string, int>& type,
               const std::map<std::string, std::map<std::string, int>>& sub_type);
