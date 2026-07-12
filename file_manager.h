@@ -1,8 +1,13 @@
+#include <map>
 #include <string>
 #include <atomic>
 #include <memory>
-#include <map>
+#include <filesystem>
+
+#include <portable-file-dialogs.h>
 #include "structures.h"
+
+namespace fs = std::filesystem;
 
 #ifndef GITHUB_TOKEN
 #define GITHUB_TOKEN ""
@@ -21,7 +26,20 @@ struct FileData {
 };
 
 struct FileIterator {
-    int total;
+    fs::recursive_directory_iterator dirIterator;
+    fs::recursive_directory_iterator endIterator;
+    ChosenExtensions chosen;
+    FileData data;
+
+    // Конструктор
+    explicit FileIterator(const fs::path& root, ChosenExtensions ext) : dirIterator(root), endIterator(), chosen(ext) {
+        while (dirIterator != endIterator && !chosen.check(dirIterator->path().extension().string())) {
+            ++dirIterator;
+        }
+        fillCurrentData(); // заполняем data для ПЕРВОГО элемента сразу в конструкторе
+    }
+    void fillCurrentData();
+
     FileIterator& operator++();
     FileIterator begin();
     FileIterator end();
@@ -32,23 +50,30 @@ struct FileIterator {
 
 
 class FileManager {
+    std::unique_ptr<pfd::save_file> save_dialog = nullptr;
+    std::unique_ptr<pfd::select_folder> select_dialog = nullptr;
+
+    fs::path save_path;
+
     std::atomic<FileManagerEvent> event;
     std::atomic<std::shared_ptr<std::string>> errorString;
     std::shared_ptr<FileIterator> fileIterator;
+    std::string path_or_url = "";
     ChosenExtensions chosen;
 public:
+    int total = 0;
+
     void startPathScan();
     void startURLScan();
     void recognizeInput(const std::string&);
 
-    void setEvent(FileManagerEvent);
     void setExtensions(ChosenExtensions);
 
+    std::string getPath();
     FileManagerEvent getEvent();
+    std::map<std::string, int> getExtensionCount();
     std::shared_ptr<std::string> getErrorMassege();
     std::shared_ptr<FileIterator> getFileIterator();
-    std::map<std::string, int> getExtensionCount();
-    std::string getPath();
 
     void eventProcessed();
 
@@ -57,6 +82,7 @@ public:
     void openSaveDialog();
     bool updateSaveDialog();
 
-    void save(const std::map<std::string, int>& type,
+    void save(const std::string& path,
+              const std::map<std::string, int>& type,
               const std::map<std::string, std::map<std::string, int>>& sub_type);
 };

@@ -21,9 +21,8 @@ struct Table {
 };
 
 void work(Parser& parser, std::shared_ptr<FileIterator> fileIterator, Framework& gui, std::atomic<bool>& is_work_finished) {
-    // работаем
     for (auto& iter : *fileIterator) {
-        parser.parse(*iter.text); // разыменовываем shared_ptr<string> text
+        parser.parse(*iter.text);
 
         // отдаём инфу для вывода в прогресс бар в atomic переменные
         gui.curr.store(iter.curr);
@@ -97,7 +96,6 @@ int main() {
                                     default: { break; }
                                 }
 
-                                // Обработали ивент, сообщаем об этом gui
                                 gui.eventProcessed();
                                 break;
                             }
@@ -126,7 +124,7 @@ int main() {
                     std::shared_ptr<std::map<std::string, int>> tokens = parser.getTokens();
                     std::shared_ptr<std::map<std::string, std::map<std::string, int>>> detailedTokens = parser.getDetailedTokens();
                     // Добавляем инфу из fileManager
-                    (*tokens)["file"] = fileIterator.load()->total;
+                    (*tokens)["file"] = fileManager.total;
                     (*detailedTokens)["file"] = fileManager.getExtensionCount();
                     // Загружаем в таблицу
                     table.rows.store(tokens);
@@ -143,7 +141,7 @@ int main() {
                     // ЗАПУСКАЕМ РАБОТУ
                     case FileManagerEvent::WorkStarted: {
                         fileIterator.store(fileManager.getFileIterator());
-                        gui.total.store(fileIterator.load()->total);
+                        gui.total.store(fileManager.total);
 
                         std::thread parserThread(work, std::ref(parser), fileIterator.load(), std::ref(gui), std::ref(is_work_finished));
                         parserThread.detach();
@@ -166,7 +164,7 @@ int main() {
                     // ОКНО СОХРАНЕНИЯ ОТКРЫТО
                     case FileManagerEvent::SaveDialogOpened: {
                         if (fileManager.updateSaveDialog()) {
-                            fileManager.save(*table.rows.load(), *table.sub_rows.load());
+                            fileManager.save(fileManager.getSavePath(), *table.rows.load(), *table.sub_rows.load());
                             fileManager.eventProcessed();
                         }
                         break;
