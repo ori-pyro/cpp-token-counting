@@ -145,3 +145,6 @@ void FileManager::save(const std::string& path,
         }
     }
 }
+std::string FileManager::getSavePath() {
+    return save_path.string();
+}

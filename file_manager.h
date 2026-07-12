@@ -70,6 +70,7 @@ public:
     void setExtensions(ChosenExtensions);
 
     std::string getPath();
+    std::string getSavePath();
     FileManagerEvent getEvent();
     std::map<std::string, int> getExtensionCount();
     std::shared_ptr<std::string> getErrorMassege();
