@@ -3,9 +3,19 @@
 #include <atomic>
 #include <memory>
 #include <map>
+
 #include "framework.h"
 #include "parser.h"
+
+#define Rectangle WinRectangle
+#define CloseWindow WinCloseWindow
+#define ShowCursor WinShowCursor
+
 #include "file_manager.h"
+
+#undef Rectangle
+#undef CloseWindow
+#undef ShowCursor
 
 // enum class Screen { InputScreen, LoadingScreen, TableScreen };
 
@@ -27,7 +37,9 @@ void work(Parser& parser, std::shared_ptr<FileIterator> fileIterator, Framework&
         // отдаём инфу для вывода в прогресс бар в atomic переменные
         gui.curr.store(iter.curr);
         gui.filename.store(std::move(iter.filename));
+        gui.setProgressBarText(nullptr);
     }
+    parser.Summ();
     is_work_finished.store(true);
 }
 
@@ -165,9 +177,16 @@ void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table&
                                 break;
                             }
                             case FrameworkEvent::BackPressed: {
-                                gui.setScreen(Screen::InputScreen);
                                 is_work_finished.store(false);
+
                                 // TODO Чистим таблицу и прогресс бар и вообще всё чистим на всякий случай
+                                parser.clear_table();
+                                gui.curr.store(0);
+                                gui.total.store(0);
+                                gui.setProgressBarText(nullptr);
+                                gui.setErrorMassege(nullptr);
+
+                                gui.setScreen(Screen::InputScreen);
                                 gui.eventProcessed();
                                 break;
                             }

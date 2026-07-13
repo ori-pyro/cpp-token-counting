@@ -22,8 +22,8 @@ enum class FileManagerEvent { Empty,
                               ScanStarted, WorkStarted, Working };
 
 struct FileData {
-    int curr;
-    std::shared_ptr<std::string> text;
+    int curr = 0;
+    std::shared_ptr<std::string> text ;
     std::shared_ptr<std::string> filename;
 };
 

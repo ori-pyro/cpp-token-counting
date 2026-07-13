@@ -112,6 +112,7 @@ std::shared_ptr<FileIterator> FileManager::getFileIterator() {
 
 void FileManager::openBrowseDialog() {
     select_dialog = std::make_unique<pfd::select_folder>("Выберите директорию");
+    event.store(FileManagerEvent::BrowseDialogOpened);
 }
 bool FileManager::updateBrowseDialog() {
     if (select_dialog->ready()) {
@@ -128,6 +129,7 @@ void FileManager::openSaveDialog() {
         std::vector<std::string>{ "Text Files (*.txt)", "*.txt" },
         pfd::opt::force_overwrite
     );
+    event.store(FileManagerEvent::SaveDialogOpened);
 }
 bool FileManager::updateSaveDialog() {
     if (save_dialog->ready()) {

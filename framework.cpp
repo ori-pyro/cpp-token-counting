@@ -62,7 +62,6 @@ Framework::Framework() {
         style.Colors[ImGuiCol_TableBorderLight]     = TITLEBAR_COLOR_ACTIVATED;
         style.Colors[ImGuiCol_TableBorderStrong]    = TITLEBAR_COLOR_ACTIVATED;
 }
-
 void Framework::loop() {
     running.store(true);
     while (!WindowShouldClose() && running.load()) {
@@ -107,12 +106,7 @@ void Framework::loop() {
             ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
 
                 // Контент в основном окне
-                const float content_top = TITLE_BAR_HEIGHT;
-                const float content_height = HEIGHT - content_top - BUTTON_BAR;
-                ImGui::SetCursorPosY(content_top);
-                    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
-                    ImGui::BeginChild("Content", ImVec2(0, content_height), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
-
+                ImGui::SetCursorPosY(TITLE_BAR_HEIGHT);
                     switch (screen.load()) {
                         case Screen::InputScreen: {
                             drawInputScreen();
@@ -127,9 +121,6 @@ void Framework::loop() {
                             break;
                         }
                     }
-
-                    ImGui::PopStyleVar();
-                    ImGui::EndChild();
                 ImGui::PopStyleColor();
 
         ImGui::End();
@@ -148,27 +139,39 @@ Framework::~Framework() {
 }
 
 void Framework::drawInputScreen() {
-    // Поле ввода, кнопка обзор
-    drawInputField(); ImGui::SameLine(); browseButton();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
+    ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+        // Поле ввода, кнопка обзор
+        drawInputField(); ImGui::SameLine(); browseButton();
 
-    ImGui::Dummy(ImVec2(0.0f, 15.0f));
-    ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
-        ImGui::Text("! Анализ по URL намеренно замедлен,");
-        ImGui::Text("  чтобы сервер не принял его за ddos атаку");
-    ImGui::PopStyleColor();
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
+            ImGui::Text("! URL пока не работают");
+        ImGui::PopStyleColor();
 
-    // Чекбоксы
-    drawCheckBox();
+        // Чекбоксы
+        drawCheckBox();
 
-    // Сообщение об ошибке
-    if (!input_is_correct) { drawErrorMessage(); }
-    continueButton();
+        // Сообщение об ошибке
+        if (!input_is_correct) { drawErrorMessage(); }
+        continueButton();
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
 }
 void Framework::drawLoadingScreen() {
-    drawProgressBar();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
+    ImGui::BeginChild("Content", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+        drawProgressBar();
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
 }
 void Framework::drawTableScreen() {
-    drawTable();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
+    ImGui::BeginChild("Content", ImVec2(0, TABLE_HEIGHT), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+        drawTable();
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
+
 
     ImGui::SetCursorPosY(HEIGHT-BUTTON_BAR);
 
@@ -256,10 +259,10 @@ void Framework::drawProgressBar() {
         ImGui::SetCursorPos(cursor_pos_before_progress_bar);
 
         if (!(curr.load() && total.load())) {
-            ImGui::Text("%s", progress_bar_text.load()->c_str());
+            ImGui::Text(" %s", progress_bar_text.load()->c_str());
         } else {
-            std::string str = std::to_string(curr.load()) + "/" + std::to_string(total.load()) +
-                            " " + *progress_bar_text.load();
+            std::string str = " " + std::to_string(curr.load()) + "/" + std::to_string(total.load()) +
+                            " " + *filename.load();
 
             ImGui::Text("%s", str.c_str());
         }

@@ -9,9 +9,6 @@ public:
     Parser() = default;
     ~Parser() = default;
     std::unordered_map<std::string, int> tokens {
-        {".cpp", 0},
-        {".h", 0},
-        {".hpp", 0},
         {"identifier", 0},
         {"keyword", 0},
         {"literal", 0},
