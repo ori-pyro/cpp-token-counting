@@ -19,19 +19,12 @@ set(CPR_USE_SYSTEM_LIB_PSL OFF CACHE BOOL "Disable libpsl" FORCE)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build libraries statically" FORCE)
 
-# ==== Переключение raylib на SDL2-бэкенд ====
-# GLFW не умеет двигать окно по кастомному titlebar на Wayland (xdg_toplevel_move
-# не реализован в GLFW, открытый issue glfw/glfw#2604). SDL2 это умеет через
-# SDL_SetWindowHitTest — единый API для Windows/X11/Wayland.
 set(CUSTOMIZE_BUILD ON CACHE BOOL "Show options for customizing raylib build" FORCE)
 set(PLATFORM "SDL" CACHE STRING "Platform to build raylib for" FORCE)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
-# SDL2 нужно предоставить самим — raylib её не бандлит (в отличие от GLFW).
-# Официальный SDL2 CMakeLists поддерживает FetchContent и экспортирует
-# таргеты SDL2::SDL2 / SDL2::SDL2main.
 FetchContent_Declare(
     SDL2
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
