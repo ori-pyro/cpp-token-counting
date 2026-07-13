@@ -112,6 +112,9 @@ if(NOT DEFINED GITHUB_TOKEN)
   message(WARNING "GITHUB_TOKEN не задан. Передай его через -DGITHUB_TOKEN=...")
 endif()
 target_compile_definitions(token_counter PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}")
+set_source_files_properties(main.cpp PROPERTIES
+    COMPILE_DEFINITIONS "WIN32_LEAN_AND_MEAN;NOMINMAX"
+)
 target_link_libraries(token_counter PRIVATE
     rlimgui_lib
     imgui

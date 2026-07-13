@@ -34,6 +34,11 @@ Framework::Framework() {
                 io.Fonts->GetGlyphRangesCyrillic() // ВКЛЮЧАЕМ РУССКИЙ ЯЗЫК
             );
 
+        // move_by_titlebar()
+        titleBarRect = { 0, 0, WIDTH, TITLE_BAR_HEIGHT };
+        isDragging = false;
+        dragOffset = { 0, 0 }; // Координаты мыши относительно левого верхнего угла окна
+
         // Делаем шрифтом по умлочанию
         if (regular_font != nullptr) {
             io.FontDefault = regular_font;
@@ -61,6 +66,8 @@ Framework::Framework() {
 void Framework::loop() {
     running.store(true);
     while (!WindowShouldClose() && running.load()) {
+        move_by_drag_titlebar();
+
         BeginDrawing();
         ClearBackground(DARKGRAY);
 
@@ -439,5 +446,34 @@ void Framework::setProgressBarText(std::shared_ptr<std::string> new_text) {
 void Framework::drawErrorMessage() {
     if (error_massege.load()) {
         ImGui::InputText("##error_text", &*error_massege.load(), ImGuiInputTextFlags_ReadOnly);
+    }
+}
+
+void Framework::move_by_drag_titlebar() {
+
+    titleBarRect.width = (float)GetScreenWidth();
+
+    Vector2 mousePos = GetMousePosition();
+
+    // Двигание окна, зажатием тайтлбара
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+        CheckCollisionPointRec(mousePos, titleBarRect))
+    {
+        if (mousePos.x < (GetScreenWidth() - TITLE_BAR_HEIGHT)) { // Проверяем что не попали кнопку закрытия
+            isDragging = true;
+            dragOffset = mousePos;
+        }
+    }
+
+    // Двигаем окно
+    if (isDragging) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            Vector2 currentWinPos = GetWindowPosition();
+            int nextX = (int)(currentWinPos.x + mousePos.x - dragOffset.x);
+            int nextY = (int)(currentWinPos.y + mousePos.y - dragOffset.y);
+            SetWindowPosition(nextX, nextY);
+        } else {
+            isDragging = false; // Отпустили мышь — закончили движение
+        }
     }
 }

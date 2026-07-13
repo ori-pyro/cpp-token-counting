@@ -88,6 +88,11 @@ private:
     void drawTableScreen();
 
     void drawTitlebar();
+    void move_by_drag_titlebar();
+
+    bool isDragging;
+    Rectangle titleBarRect;
+    Vector2 dragOffset;
 
     void drawInputField();
     void drawProgressBar();
