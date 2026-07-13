@@ -1,3 +1,5 @@
+#pragma once
+
 #include <map>
 #include <string>
 #include <atomic>
@@ -12,7 +14,7 @@ namespace fs = std::filesystem;
 #ifndef GITHUB_TOKEN
 #define GITHUB_TOKEN ""
 #endif
-std::string github_token = GITHUB_TOKEN;
+inline std::string github_token = GITHUB_TOKEN;
 
 enum class FileManagerEvent { Empty,
                               PathEnterd, URLEntered, IncorrectEntered,

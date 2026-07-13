@@ -1,23 +1,28 @@
 #include "imgui.h"                  // Фреймворк
-#include "imgui_internal.h"
 #include "raylib.h"                 // Бэкенд для ImGui
 #include "rlImGui.h"                // Мостик между RayLib и ImGui
-#include "JetBrainsMono.h"          // Подключаем шрифт
+#include <SDL.h>
 #include <misc/cpp/imgui_stdlib.h>  // Работа с std::string в ImGui
-#include "save_dialog.h"
+
+#include "JetBrainsMono.h"          // Подключаем шрифт
 #include "framework.h"
 
 using namespace std;
 
-bool ChosenExtensions::check(const std::string& extension) {
-    if ((extension == ".cpp") && cpp) { return true; }
-    if ((extension == ".cc") && cc)   { return true; }
-    if ((extension == ".cxx") && cxx) { return true; }
-    if ((extension == ".h") && h)     { return true; }
-    if ((extension == ".hpp") && hpp) { return true; }
-    if ((extension == ".hh") && hh)   { return true; }
-    if ((extension == ".hxx") && hxx) { return true; }
-    return false;
+SDL_HitTestResult Framework::titleBarHitTest(SDL_Window* win, const SDL_Point* pt, void* data) {
+    Framework* fw = static_cast<Framework*>(data);
+
+    if (pt->y >= fw->TITLE_BAR_HEIGHT) {
+        return SDL_HITTEST_NORMAL; // не тайтлбар — обычное поведение
+    }
+
+    // зона кнопок закрытия/сворачивания (справа) — должна остаться кликабельной, не draggable
+    float buttonsZoneStart = fw->WIDTH - fw->TITLE_BAR_HEIGHT * 2;
+    if (pt->x >= buttonsZoneStart) {
+        return SDL_HITTEST_NORMAL;
+    }
+
+    return SDL_HITTEST_DRAGGABLE;
 }
 
 Framework::Framework() {
@@ -25,8 +30,10 @@ Framework::Framework() {
         InitWindow(WIDTH, HEIGHT, "Token Counter");
         SetTargetFPS(60);
 
-        rlImGuiSetup(true); // Иниициализация ImGui и интеграция с RayLib
-                            // Запускает внутри себя ImGui::CreateContext()
+        // SDL_Window* sdlWindow = static_cast<SDL_Window*>(GetWindowHandle());
+        // SDL_SetWindowHitTest(sdlWindow, &Framework::titleBarHitTest, this);
+
+        rlImGuiSetup(true);
 
         ImGuiIO& io = ImGui::GetIO();
 
@@ -53,11 +60,7 @@ Framework::Framework() {
 
         ImGui::GetIO().IniFilename = nullptr; // Отключаем создание imgui.ini
 
-
         // КАСТОМНЫЙ ТАЙТЛБАР
-        titleBarRect = { 0, 0, WIDTH, TITLE_BAR_HEIGHT };
-        isDragging = false;
-        dragOffset = { 0, 0 }; // Координаты мыши относительно левого верхнего угла окна
 
         ImGuiStyle& style = ImGui::GetStyle();
 
@@ -73,110 +76,119 @@ Framework::Framework() {
         style.Colors[ImGuiCol_TableBorderLight]     = TITLEBAR_COLOR_ACTIVATED;
         style.Colors[ImGuiCol_TableBorderStrong]    = TITLEBAR_COLOR_ACTIVATED;
 }
-void Framework::update() {
-    float TABLE_HEIGHT = HEIGHT - TITLE_BAR_HEIGHT - BUTTON_BAR; // обновляем высоту таблицы если изменится размер окна
 
-    move_by_drag_titlebar();
+void Framework::loop() {
+    running.store(true);
+    while (!WindowShouldClose() && running.load()) {
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
 
-    BeginDrawing();
-    ClearBackground(DARKGRAY);
+        // TODO Нужно ли это убрать?
+        // Если мышь за пределами окна,
+        // то сообщаем ImGui об этом, иначе он
+        // будет думать, что курсор осталься на краю окна
+        if (!IsCursorOnScreen()) {
+            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+            ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+        } else {
+            ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+        }
 
-    // Если мышь за пределами окна,
-    // то сообщаем ImGui об этом, иначе он
-    // будет думать, что курсор осталься на краю окна
-    if (!IsCursorOnScreen()) {
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
-        ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    } else {
-        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
-    }
+        // TODO что делать с этим?
+        rlImGuiBegin();
+        // {
+        //     Vector2 dpiScale = GetWindowScaleDPI();
+        //     ImGuiIO& io = ImGui::GetIO();
+        //     io.DisplayFramebufferScale = ImVec2(dpiScale.x, dpiScale.y);
+        // }
 
-    rlImGuiBegin();
-    // Принудительно отключаем DPI scaling: всегда 1:1.
-    {
-        Vector2 dpiScale = GetWindowScaleDPI();
-        ImGuiIO& io = ImGui::GetIO();
-        io.DisplayFramebufferScale = ImVec2(dpiScale.x, dpiScale.y);
-    }
+        // Убираем внутренние отступы окна в ноль
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
+                                ImGuiWindowFlags_NoResize |
+                                ImGuiWindowFlags_NoMove |
+                                ImGuiWindowFlags_NoCollapse |
+                                ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-    // Убираем внутренние отступы окна в ноль
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
-                            ImGuiWindowFlags_NoResize |
-                            ImGuiWindowFlags_NoMove |
-                            ImGuiWindowFlags_NoCollapse |
-                            ImGuiWindowFlags_NoBringToFrontOnFocus;
+        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::Begin("MainPanel", nullptr, flags);
+            drawTitlebar();
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("MainPanel", nullptr, flags);
-        draw_titlebar();
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
 
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
-
-            // Контент в основном окне
-            const float content_top = TITLE_BAR_HEIGHT;
-            const float content_height = HEIGHT - content_top - BUTTON_BAR;
-            ImGui::SetCursorPosY(content_top);
-                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
-                ImGui::BeginChild("Content", ImVec2(0, content_height), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
-                    if (work_state == WAITING_INPUT) {
-                        draw_input_field();
-
-                        // Кнопка Обзор
-                        ImGui::SameLine();
-                        observe_button();
-
-                        ImGui::Dummy(ImVec2(0.0f, 15.0f));
-                        ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
-                            ImGui::Text("! Анализ по URL намеренно замедлен,");
-                            ImGui::Text("  чтобы сервер не принял его за ddos атаку");
-                        ImGui::PopStyleColor();
-
-                        draw_check_box();
-
-                        // Сообщение об ошибке
-                        if (!input_is_correct) { draw_error_message(); }
-                    }
-                    else if (work_state == WORK_IN_PROGRESS) {
-                        draw_progress_bar();
-                    }
-                    else if (work_state == SHOW_TABLE) {
-                        draw_table();
-                    }
-                ImGui::EndChild();
-                ImGui::PopStyleVar();
-
-
-                // Контент снизу с кнопками
-                ImGui::SetCursorPosY(HEIGHT-BUTTON_BAR);
-                ImGui::BeginChild("Buttons", ImVec2(0, BUTTON_BAR), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+                // Контент в основном окне
+                ImGui::SetCursorPosY(content_top);
                     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
-                        if (work_state == WAITING_INPUT) {
-                            continue_button();
-                        } else if (work_state == SHOW_TABLE) {
-                            save_button();
+                    ImGui::BeginChild("Content", ImVec2(0, content_height), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
 
-                            back_button();
+                    switch (screen.load()) {
+                        case Screen::InputScreen: {
+                            drawInputScreen();
+                            break;
                         }
+                        case Screen::LoadingScreen: {
+                            drawLoadingScreen();
+                            break;
+                        }
+                        case Screen::TableScreen: {
+                            drawTableScreen();
+                            break;
+                        }
+                    }
+
                     ImGui::PopStyleVar();
-                ImGui::EndChild();
-            ImGui::PopStyleColor();
+                    ImGui::EndChild();
+                ImGui::PopStyleColor();
 
-    ImGui::End();
-    ImGui::PopStyleVar();
+        ImGui::End();
+        ImGui::PopStyleVar();
 
 
-    rlImGuiEnd();
-    EndDrawing();
+        rlImGuiEnd();
+        EndDrawing();
+    }
+    running.store(false); // на случай если вышли именно по WindowShouldClose() (Alt+F4 или Mod+Q)
 }
+
 Framework::~Framework() {
-    rlImGuiShutdown();
-    CloseWindow();
+    rlImGuiShutdown(); // Освиобождаем ресурсы raylib
+    CloseWindow();     // Просим ОС закрыть окно
 }
 
-void Framework::draw_titlebar() {
+void Framework::drawInputScreen() {
+    // Поле ввода, кнопка обзор
+    drawInputField(); ImGui::SameLine(); browseButton();
+
+    ImGui::Dummy(ImVec2(0.0f, 15.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
+        ImGui::Text("! Анализ по URL намеренно замедлен,");
+        ImGui::Text("  чтобы сервер не принял его за ddos атаку");
+    ImGui::PopStyleColor();
+
+    // Чекбоксы
+    drawCheckBox();
+
+    // Сообщение об ошибке
+    if (!input_is_correct) { drawErrorMessage(); }
+    continueButton();
+}
+void Framework::drawLoadingScreen() {
+    drawProgressBar();
+}
+void Framework::drawTableScreen() {
+    drawTable();
+
+    ImGui::SetCursorPosY(HEIGHT-BUTTON_BAR);
+
+    ImGui::BeginChild("Buttons", ImVec2(0, BUTTON_BAR), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+        saveButton(); backButton();
+    ImGui::EndChild();
+}
+
+
+void Framework::drawTitlebar() {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, TITLEBAR_COLOR);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -197,7 +209,8 @@ void Framework::draw_titlebar() {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, CLOSE_BUTTON_ACTIVE_COLOR);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, CLOSE_BUTTON_HOVERED_COLOR);
             if (ImGui::Button("✕", ImVec2(TITLE_BAR_HEIGHT, TITLE_BAR_HEIGHT))) {
-                work_state = SHOULD_CLOSE;
+
+                running.store(false);
             }
         ImGui::PopStyleColor();
         ImGui::PopStyleColor();
@@ -225,67 +238,47 @@ void Framework::draw_titlebar() {
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
 }
-void Framework::move_by_drag_titlebar() {
 
-    titleBarRect.width = (float)GetScreenWidth();
-
-    Vector2 mousePos = GetMousePosition();
-
-    // Двигание окна, зажатием тайтлбара
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-        CheckCollisionPointRec(mousePos, titleBarRect))
-    {
-        if (mousePos.x < (GetScreenWidth() - TITLE_BAR_HEIGHT)) { // Проверяем что не попали кнопку закрытия
-            isDragging = true;
-            dragOffset = mousePos;
-        }
-    }
-
-    // Двигаем окно
-    if (isDragging) {
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            Vector2 currentWinPos = GetWindowPosition();
-            int nextX = (int)(currentWinPos.x + mousePos.x - dragOffset.x);
-            int nextY = (int)(currentWinPos.y + mousePos.y - dragOffset.y);
-            SetWindowPosition(nextX, nextY);
-        } else {
-            isDragging = false; // Отпустили мышь — закончили движение
-        }
-    }
-}
-
-void Framework::draw_input_field() {
+void Framework::drawInputField() {
     // Поле ввода
     ImGui::GetStyle().FrameBorderSize = 1.8f;
     ImGui::PushStyleColor(ImGuiCol_FrameBg, BASIC_COLOR);
     ImGui::PushStyleColor(ImGuiCol_Border, BASIC_COLOR_HIGHLIGHTED);
     ImGui::PushStyleColor(ImGuiCol_TextDisabled, TEXT_COLOR);
         ImGui::SetNextItemWidth(-(OBSERVE_BUTTON_WIDTH + FRAME_PADDING_VEC.x));
-            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите URL или путь к локальной директории", &input_buffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
-                dir_path = input_buffer;
-                work_state = JUST_INPUT;
+            if (ImGui::InputTextWithHint("##dir_path_unput", "Введите URL или путь к локальной директории", &*input_buffer.load(), ImGuiInputTextFlags_EnterReturnsTrue)) {
+                frameworkEvent.store(FrameworkEvent::ContinuePressed);
             }
-
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::GetStyle().FrameBorderSize = 0.0f;
 }
-void Framework::draw_progress_bar() {
+void Framework::drawProgressBar() {
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, TITLEBAR_COLOR_ACTIVATED);
     ImGui::PushStyleColor(ImGuiCol_FrameBg, TITLEBAR_COLOR);
     ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR);
         ImVec2 cursor_pos_before_progress_bar = ImGui::GetCursorPos();
-        ImGui::ProgressBar(progress_bar_fraction, ImVec2(-1, 25), "");
+
+        ImGui::ProgressBar(static_cast<float>(curr.load())/total.load(), ImVec2(-1, 25), "");
 
         cursor_pos_before_progress_bar.y += 3;
         ImGui::SetCursorPos(cursor_pos_before_progress_bar);
-        ImGui::Text((" " + progress_bar_text).c_str(), ImVec2(-1, 25));
+
+        if (!(curr.load() && total.load())) {
+            ImGui::Text("%s", progress_bar_text.load()->c_str());
+        } else {
+            std::string str = std::to_string(curr.load()) + "/" + std::to_string(total.load()) +
+                            " " + *progress_bar_text.load();
+
+            ImGui::Text("%s", str.c_str());
+        }
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
+
     ImGui::PopStyleColor();
 }
-void Framework::draw_table() {
+void Framework::drawTable() {
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 3.0f));
     if (ImGui::BeginTable("my_table", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
@@ -352,7 +345,7 @@ void Framework::draw_table() {
 
 }
 
-void Framework::draw_check_box() {
+void Framework::drawCheckBox() {
     ImGui::Dummy(ImVec2(0.0f, 15.0f));
 
     ImGui::GetStyle().FrameBorderSize = 1.5f;
@@ -367,51 +360,56 @@ void Framework::draw_check_box() {
     ImGui::PopStyleVar();
     ImGui::GetStyle().FrameBorderSize = 0.0f;
 }
-void Framework::save_button() {
+void Framework::saveButton() {
     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - (BUTTON_SIZE.x + FRAME_PADDING_VEC.x), ImGui::GetWindowHeight()-(BUTTON_SIZE.y + FRAME_PADDING_VEC.y)));
 
     if (ImGui::Button("Сохранить", BUTTON_SIZE)) {
-        open_save_dialog();
-    }
-    if (save_dialog) {
-        save_dialog_update(dir_path, types, sub_types);
+        frameworkEvent.store(FrameworkEvent::SavePressed);
     }
 }
-void Framework::back_button() {
+void Framework::backButton() {
     ImGui::SetCursorPos(ImVec2(FRAME_PADDING_VEC.x, ImGui::GetWindowHeight()-(BUTTON_SIZE.y + FRAME_PADDING_VEC.y)));
 
     if (ImGui::Button("Назад", BUTTON_SIZE)) {
-        work_state = WAITING_INPUT;
-        input_is_correct = true;
-        error_massege = "";
+        frameworkEvent.store(FrameworkEvent::BackPressed);
     }
 }
-void Framework::observe_button() {
+void Framework::browseButton() {
     if (ImGui::Button("Обзор", ImVec2(OBSERVE_BUTTON_WIDTH, 0))) {
-        open_select_dialog();
-    }
-    if (select_dialog) {
-        select_dialog_update(input_buffer); // обновляет input_buffer
+        frameworkEvent.store(FrameworkEvent::BrowsePressed);
     }
 }
-void Framework::continue_button() {
+void Framework::continueButton() {
     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth()-(BUTTON_SIZE.x+FRAME_PADDING_VEC.x), ImGui::GetWindowHeight()-(BUTTON_SIZE.y+FRAME_PADDING_VEC.y)));
     if (ImGui::Button("Далее", BUTTON_SIZE)) {
-        dir_path = input_buffer;
-        work_state = JUST_INPUT;
+        frameworkEvent.store(FrameworkEvent::ContinuePressed);
     }
 }
 
-string Framework::getInput() {
-    return dir_path;
+void Framework::setScreen(Screen new_screen) {
+    screen.store(new_screen);
 }
-void Framework::set_progress_bar(float value) {
-    progress_bar_fraction = value;
+Screen Framework::getScreen() {
+    return screen.load();
+}
+
+FrameworkEvent Framework::getEvent() {
+    return frameworkEvent.load();
+}
+void Framework::eventProcessed() {
+    frameworkEvent.store(FrameworkEvent::Empty);
+}
+
+ChosenExtensions Framework::getExtensions() {
+    return chosen;
+}
+
+string Framework::getInput() {
+    return *input_buffer.load();
 }
 void Framework::setTable(
     const std::map<std::string, int>& types_new,
     const std::map<std::string, std::map<std::string, int>>& sub_types_new) {
-
 
     table = vectorTable();
 
@@ -438,12 +436,25 @@ void Framework::setTable(
         table.expandable_rows.push_back(row);
     }
 }
-
-void Framework::incorrect_input(std::string new_error_massege) {
-    input_is_correct = false;
-    error_massege = new_error_massege;
-    work_state = WAITING_INPUT;
+void Framework::setInput(std::string new_input) {
+    input_buffer.store(std::make_shared<std::string>(new_input));
 }
-void Framework::draw_error_message() {
-    ImGui::InputText("##error_text", &error_massege, ImGuiInputTextFlags_ReadOnly);
+
+void Framework::setErrorMassege(std::shared_ptr<std::string> new_error) {
+    // Пустое сообщение = нет ошибки
+    if (new_error) {
+        input_is_correct = false;
+    } else {
+        input_is_correct = true;
+    }
+    error_massege.store(new_error);
+}
+void Framework::setProgressBarText(std::shared_ptr<std::string> new_text) {
+    progress_bar_text.store(new_text);
+}
+
+void Framework::drawErrorMessage() {
+    if (error_massege.load()) {
+        ImGui::InputText("##error_text", &*error_massege.load(), ImGuiInputTextFlags_ReadOnly);
+    }
 }

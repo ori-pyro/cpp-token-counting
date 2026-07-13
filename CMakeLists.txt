@@ -19,9 +19,32 @@ set(CPR_USE_SYSTEM_LIB_PSL OFF CACHE BOOL "Disable libpsl" FORCE)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build libraries statically" FORCE)
 
+# ==== Переключение raylib на SDL2-бэкенд ====
+# GLFW не умеет двигать окно по кастомному titlebar на Wayland (xdg_toplevel_move
+# не реализован в GLFW, открытый issue glfw/glfw#2604). SDL2 это умеет через
+# SDL_SetWindowHitTest — единый API для Windows/X11/Wayland.
+set(CUSTOMIZE_BUILD ON CACHE BOOL "Show options for customizing raylib build" FORCE)
+set(PLATFORM "SDL" CACHE STRING "Platform to build raylib for" FORCE)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
+
+# SDL2 нужно предоставить самим — raylib её не бандлит (в отличие от GLFW).
+# Официальный SDL2 CMakeLists поддерживает FetchContent и экспортирует
+# таргеты SDL2::SDL2 / SDL2::SDL2main.
+FetchContent_Declare(
+    SDL2
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG        release-2.30.9
+)
+set(SDL_SHARED OFF CACHE BOOL "Build SDL2 as static lib" FORCE)
+set(SDL_STATIC ON CACHE BOOL "Build SDL2 as static lib" FORCE)
+set(SDL_TEST OFF CACHE BOOL "Disable SDL2 tests" FORCE)
+# raylib использует свой встроенный miniaudio, аудио-подсистема SDL2 не нужна вообще.
+# Отключаем pipewire отдельно, т.к. его C API в системной libpipewire (Arch, rolling release)
+# несовместим с тем, что ожидает SDL 2.30.9 (pw_node_enum_params сменил сигнатуру).
+set(SDL_PIPEWIRE OFF CACHE BOOL "Disable SDL2 pipewire audio backend" FORCE)
+FetchContent_MakeAvailable(SDL2)
 
 FetchContent_Declare(
     portable-file-dialogs
@@ -98,8 +121,9 @@ set(MAIN_SOURCES
     main.cpp
     framework.cpp
     framework.h
-    save_dialog.cpp
-    save_dialog.h
+    file_manager.cpp
+    file_manager.h
+    structures.h
     parser.cpp
     parser.h
 )
@@ -116,6 +140,7 @@ target_link_libraries(token_counter PRIVATE
     portable-file-dialogs
     nlohmann_json::nlohmann_json
     cpr::cpr
+    SDL2-static
 )
 
 if(UNIX AND NOT APPLE)
@@ -132,6 +157,7 @@ if(UNIX AND NOT APPLE)
         portable-file-dialogs
         nlohmann_json::nlohmann_json
         cpr::cpr
+        SDL2-static
     )
   set_target_properties(token_counter_linux PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
