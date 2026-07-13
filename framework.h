@@ -2,14 +2,12 @@
 
 #include "imgui.h"      // Фреймворк
 #include "raylib.h"     // Бэкенд для ImGui
-#include <SDL.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 #include <map>
 #include <atomic>
-#include <mutex>
 
 #include "structures.h"
 
@@ -34,7 +32,7 @@ enum class FrameworkEvent { Empty, ContinuePressed, BackPressed, SavePressed, Br
 class Framework {
 private:
     // framework.h, в private:
-    static SDL_HitTestResult titleBarHitTest(SDL_Window* win, const SDL_Point* pt, void* data);
+    // static SDL_HitTestResult titleBarHitTest(SDL_Window* win, const SDL_Point* pt, void* data);
 
     float WIDTH                 = 600.0f;
     float HEIGHT                = 400.0f;

@@ -19,25 +19,11 @@ set(CPR_USE_SYSTEM_LIB_PSL OFF CACHE BOOL "Disable libpsl" FORCE)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build libraries statically" FORCE)
 
-set(CUSTOMIZE_BUILD ON CACHE BOOL "Show options for customizing raylib build" FORCE)
-set(PLATFORM "SDL" CACHE STRING "Platform to build raylib for" FORCE)
+set(GLFW_BUILD_WAYLAND ON CACHE BOOL "" FORCE)
+set(GLFW_BUILD_X11 OFF CACHE BOOL "" FORCE)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
-
-FetchContent_Declare(
-    SDL2
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG        release-2.30.9
-)
-set(SDL_SHARED OFF CACHE BOOL "Build SDL2 as static lib" FORCE)
-set(SDL_STATIC ON CACHE BOOL "Build SDL2 as static lib" FORCE)
-set(SDL_TEST OFF CACHE BOOL "Disable SDL2 tests" FORCE)
-# raylib использует свой встроенный miniaudio, аудио-подсистема SDL2 не нужна вообще.
-# Отключаем pipewire отдельно, т.к. его C API в системной libpipewire (Arch, rolling release)
-# несовместим с тем, что ожидает SDL 2.30.9 (pw_node_enum_params сменил сигнатуру).
-set(SDL_PIPEWIRE OFF CACHE BOOL "Disable SDL2 pipewire audio backend" FORCE)
-FetchContent_MakeAvailable(SDL2)
 
 FetchContent_Declare(
     portable-file-dialogs
@@ -120,11 +106,12 @@ set(MAIN_SOURCES
     parser.cpp
     parser.h
 )
+
 add_executable(token_counter ${MAIN_SOURCES} )
 if(NOT DEFINED GITHUB_TOKEN)
   message(WARNING "GITHUB_TOKEN не задан. Передай его через -DGITHUB_TOKEN=...")
 endif()
-target_compile_definitions(token_counter PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}") # добавляем github api ключ
+target_compile_definitions(token_counter PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}")
 target_link_libraries(token_counter PRIVATE
     rlimgui_lib
     imgui
@@ -133,7 +120,6 @@ target_link_libraries(token_counter PRIVATE
     portable-file-dialogs
     nlohmann_json::nlohmann_json
     cpr::cpr
-    SDL2-static
 )
 
 if(UNIX AND NOT APPLE)
@@ -141,7 +127,7 @@ if(UNIX AND NOT APPLE)
   if(NOT DEFINED GITHUB_TOKEN)
     message(WARNING "GITHUB_TOKEN не задан. Передай его через -DGITHUB_TOKEN=...")
   endif()
-  target_compile_definitions(token_counter_linux PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}") # добавляем github api ключ
+  target_compile_definitions(token_counter_linux PRIVATE GITHUB_TOKEN="${GITHUB_TOKEN}")
   target_link_libraries(token_counter_linux PRIVATE
         rlimgui_lib
         imgui
@@ -150,7 +136,6 @@ if(UNIX AND NOT APPLE)
         portable-file-dialogs
         nlohmann_json::nlohmann_json
         cpr::cpr
-        SDL2-static
     )
   set_target_properties(token_counter_linux PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"

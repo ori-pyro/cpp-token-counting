@@ -1,7 +1,6 @@
 #include "imgui.h"                  // Фреймворк
 #include "raylib.h"                 // Бэкенд для ImGui
 #include "rlImGui.h"                // Мостик между RayLib и ImGui
-#include <SDL.h>
 #include <misc/cpp/imgui_stdlib.h>  // Работа с std::string в ImGui
 
 #include "JetBrainsMono.h"          // Подключаем шрифт
@@ -9,29 +8,11 @@
 
 using namespace std;
 
-SDL_HitTestResult Framework::titleBarHitTest(SDL_Window* win, const SDL_Point* pt, void* data) {
-    Framework* fw = static_cast<Framework*>(data);
-
-    if (pt->y >= fw->TITLE_BAR_HEIGHT) {
-        return SDL_HITTEST_NORMAL; // не тайтлбар — обычное поведение
-    }
-
-    // зона кнопок закрытия/сворачивания (справа) — должна остаться кликабельной, не draggable
-    float buttonsZoneStart = fw->WIDTH - fw->TITLE_BAR_HEIGHT * 2;
-    if (pt->x >= buttonsZoneStart) {
-        return SDL_HITTEST_NORMAL;
-    }
-
-    return SDL_HITTEST_DRAGGABLE;
-}
 
 Framework::Framework() {
         SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_HIGHDPI);
         InitWindow(WIDTH, HEIGHT, "Token Counter");
         SetTargetFPS(60);
-
-        // SDL_Window* sdlWindow = static_cast<SDL_Window*>(GetWindowHandle());
-        // SDL_SetWindowHitTest(sdlWindow, &Framework::titleBarHitTest, this);
 
         rlImGuiSetup(true);
 
@@ -96,11 +77,11 @@ void Framework::loop() {
 
         // TODO что делать с этим?
         rlImGuiBegin();
-        // {
-        //     Vector2 dpiScale = GetWindowScaleDPI();
-        //     ImGuiIO& io = ImGui::GetIO();
-        //     io.DisplayFramebufferScale = ImVec2(dpiScale.x, dpiScale.y);
-        // }
+        {
+            Vector2 dpiScale = GetWindowScaleDPI();
+            ImGuiIO& io = ImGui::GetIO();
+            io.DisplayFramebufferScale = ImVec2(dpiScale.x, dpiScale.y);
+        }
 
         // Убираем внутренние отступы окна в ноль
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
@@ -119,6 +100,8 @@ void Framework::loop() {
             ImGui::PushStyleColor(ImGuiCol_ChildBg, BASIC_COLOR);
 
                 // Контент в основном окне
+                const float content_top = TITLE_BAR_HEIGHT;
+                const float content_height = HEIGHT - content_top - BUTTON_BAR;
                 ImGui::SetCursorPosY(content_top);
                     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, FRAME_PADDING_VEC);
                     ImGui::BeginChild("Content", ImVec2(0, content_height), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);

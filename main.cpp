@@ -31,21 +31,7 @@ void work(Parser& parser, std::shared_ptr<FileIterator> fileIterator, Framework&
     is_work_finished.store(true);
 }
 
-int main() {
-    Parser parser;
-    Framework gui;
-    FileManager fileManager;
-
-    Table table;
-
-    std::atomic<std::shared_ptr<FileIterator>> fileIterator;
-
-    // Запускаем поток с графикой
-    std::thread guiThread(&Framework::loop, &gui);
-    guiThread.detach();
-
-    std::atomic<bool> is_work_finished = false;
-
+void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table& table, std::atomic<bool>& is_work_finished, std::atomic<std::shared_ptr<FileIterator>>& fileIterator) {
     while (gui.running) {
         switch (gui.getScreen()) {
             // ЭКРАН ВВОДА
@@ -194,4 +180,23 @@ int main() {
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(50)); // просто ждём, чтобы не перегрузить процессор
     }
+}
+
+int main() {
+    Framework gui;
+
+    Parser parser;
+    FileManager fileManager;
+    Table table;
+
+    std::atomic<bool> is_work_finished = false;
+    std::atomic<std::shared_ptr<FileIterator>> fileIterator;
+
+    // Запускаем логику-диспетчер в отдельном потоке
+    std::thread dispatcherThread(dispatcher, std::ref(gui), std::ref(fileManager), std::ref(parser), std::ref(table), std::ref(is_work_finished), std::ref(fileIterator));
+    dispatcherThread.detach();
+
+    gui.loop();
+
+    return 0;
 }
