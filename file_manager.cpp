@@ -25,13 +25,14 @@ void FileIterator::fillCurrentData() {
 
 FileIterator& FileIterator::operator++() {
     ++dirIterator;
-    while (dirIterator != endIterator && !chosen.check(dirIterator->path().extension().string())) {
+    while (dirIterator != endIterator && !dirIterator->is_regular_file() && !chosen.check(dirIterator->path().extension().string())) {
         ++dirIterator;
     }
     fillCurrentData();
     return *this;
 }
 FileIterator FileIterator::begin() {
+    operator++(); // Находим первый файл, который не папка
     return *this;
 }
 FileIterator FileIterator::end() {
@@ -54,10 +55,12 @@ FileData& FileIterator::operator*() {
 void FileManager::startPathScan() {
     total = 0;
     for (const auto& entry : fs::recursive_directory_iterator(path_or_url)) {
-        std::string extension = entry.path().extension().string();
+        if (entry.is_regular_file()) {
+            std::string extension = entry.path().extension().string();
 
-        if (chosen.check_and_count(extension)) {
-            total++;
+            if (chosen.check_and_count(extension)) {
+                total++;
+            }
         }
     }
     event.store(FileManagerEvent::WorkStarted);
