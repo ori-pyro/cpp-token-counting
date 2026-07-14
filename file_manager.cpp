@@ -25,14 +25,19 @@ void FileIterator::fillCurrentData() {
 
 FileIterator& FileIterator::operator++() {
     ++dirIterator;
-    while (dirIterator != endIterator && !dirIterator->is_regular_file() && !chosen.check(dirIterator->path().extension().string())) {
+    while (dirIterator != endIterator) {
+        if (dirIterator->is_regular_file() && chosen.check(dirIterator->path().extension().string())) {
+            break;
+        }
         ++dirIterator;
     }
     fillCurrentData();
     return *this;
 }
 FileIterator FileIterator::begin() {
-    operator++(); // Находим первый файл, который не папка
+    if (dirIterator != endIterator) {
+        operator++(); // Находим первый файл, который не папка
+    }
     return *this;
 }
 FileIterator FileIterator::end() {

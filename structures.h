@@ -28,7 +28,7 @@ struct ChosenExtensions {
         else if ((extension == ".hpp") && hpp) { return true; }
         else if ((extension == ".hh") && hh)   { return true; }
         else if ((extension == ".hxx") && hxx) { return true; }
-        else { return true; }
+        else { return false; }
     }
 
     bool check_and_count(const std::string& extension) {
@@ -39,6 +39,6 @@ struct ChosenExtensions {
         else if ((extension == ".hpp") && hpp) { hpp_cnt++; return true; }
         else if ((extension == ".hh") && hh)   { hh_cnt++; return true; }
         else if ((extension == ".hxx") && hxx) { hxx_cnt++; return true; }
-        else { return true; }
+        else { return false; }
     }
 };
