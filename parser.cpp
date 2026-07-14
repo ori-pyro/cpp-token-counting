@@ -1,3 +1,4 @@
+#include <memory>
 #include <string>
 #include <re2/re2.h>
 #include <map>
@@ -6,7 +7,7 @@
 #include <iostream>
 
 
-void Parser::parser(std::string& text) {
+void Parser::parse(std::string& text) {
     rest = re2::StringPiece(text);
    	const char* start = text.data();
    	const char* prev = start;
@@ -189,4 +190,17 @@ bool Parser::is_user_defined_literal() {
         return true;
     }
     return false;
+}
+
+std::shared_ptr<std::map<std::string, int>> Parser::getTokens() {
+    return std::make_shared<std::map<std::string, int>>(tokens.begin(), tokens.end());
+}
+std::shared_ptr<std::map<std::string, std::map<std::string, int>>> Parser::getDetailedTokens() {
+    auto mapDetailedTokens = std::make_shared<std::map<std::string, std::map<std::string, int>>>();
+
+    for (const auto& [type, inner_map] : detailedTokens) {
+        (*mapDetailedTokens)[type] = std::map<std::string, int>(inner_map.begin(), inner_map.end());
+    }
+
+    return mapDetailedTokens;
 }

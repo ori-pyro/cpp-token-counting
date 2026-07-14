@@ -1,9 +1,16 @@
+#pragma once
+
 #include "imgui.h"      // Фреймворк
 #include "raylib.h"     // Бэкенд для ImGui
+
+#include <memory>
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <map>
+#include <atomic>
+
+#include "structures.h"
+
 
 struct Table_row_expandable {
     std::string type = "";
@@ -13,21 +20,28 @@ struct Table_row_expandable {
     std::vector<int> sub_count;
 };
 
-struct Table {
+struct vectorTable {
     std::vector<Table_row_expandable> expandable_rows;
 };
 
 
-enum Work_state {WAITING_INPUT, JUST_INPUT, WORK_IN_PROGRESS, SHOULD_CLOSE, SHOW_TABLE};
+enum class Screen { InputScreen, LoadingScreen, TableScreen };
+enum class FrameworkEvent { Empty, ContinuePressed, BackPressed, SavePressed, BrowsePressed };
+
 
 class Framework {
-public:
+private:
+    // framework.h, в private:
+    // static SDL_HitTestResult titleBarHitTest(SDL_Window* win, const SDL_Point* pt, void* data);
+
     float WIDTH                 = 600.0f;
     float HEIGHT                = 400.0f;
     float TITLE_BAR_HEIGHT      = 30.0f;
     float BUTTON_BAR            = 60.0f;
     float TABLE_HEIGHT          = HEIGHT - TITLE_BAR_HEIGHT - BUTTON_BAR;
     float OBSERVE_BUTTON_WIDTH  = 80.0f;
+    const float content_top     = TITLE_BAR_HEIGHT;
+    const float content_height  = HEIGHT - content_top - BUTTON_BAR;
     ImVec2 FRAME_PADDING_VEC    = { 10.0f, 10.0f };
     ImVec2 BUTTON_SIZE          = { 100.0f, 40.0f };
     ImVec2 TABLE_CELL_VEC       = { 24.0f, 24.0f };
@@ -49,58 +63,85 @@ public:
     std::map<std::string, int> types;
     std::map<std::string, std::map<std::string, int>> sub_types;
 
-    Table table;
+    vectorTable table;
 
     ImFont* regular_font = nullptr;
     ImFont* small_font = nullptr;
 
-    std::string dir_path = "";
-    std::string input_buffer = "";
+    // ввод — трогается и из guiThread (ImGui-виджет), и из main-потока (getInput/setInput)
+    std::atomic<std::shared_ptr<std::string>> input_buffer{ std::make_shared<std::string>("") };
 
-    bool cpp = false;
-    bool cc = false;
-    bool cxx = false;
-    bool h = false;
-    bool hpp = false;
-    bool hh = false;
-    bool hxx = false;
+    ChosenExtensions chosen;
+
+    std::atomic<Screen> screen{ Screen::InputScreen };
+    std::atomic<FrameworkEvent> frameworkEvent{ FrameworkEvent::Empty };
+
+    std::atomic<std::shared_ptr<std::string>> error_massege{ std::make_shared<std::string>("") };
+    std::atomic<std::shared_ptr<std::string>> progress_bar_text{ std::make_shared<std::string>("") };
+
+    bool input_is_correct = true;
+
+    void update();
+
+    void drawInputScreen();
+    void drawLoadingScreen();
+    void drawTableScreen();
+
+    void drawTitlebar();
+    void move_by_drag_titlebar();
 
     bool isDragging;
     Rectangle titleBarRect;
     Vector2 dragOffset;
 
-    Work_state work_state = WAITING_INPUT;
-    std::string error_massege;
+    void drawInputField();
+    void drawProgressBar();
+    void drawTable();
 
-    std::string progress_bar_text = "";
-    float progress_bar_fraction;
+    void drawCheckBox();
+    void saveButton();
+    void backButton();
+    void browseButton();
+    void continueButton();
 
-    bool input_is_correct = true;
+    void drawErrorMessage();
 
+public:
     Framework();
-    void update();
     ~Framework();
+    // главный цикл — запускается в отдельном потоке из main (std::thread(&Framework::loop, &gui))
+    void loop();
 
-    void draw_titlebar();
-    void move_by_drag_titlebar();
+    // используется в while(gui.running) в main
+    std::atomic<bool> running{ false };
 
-    void draw_input_field();
-    void draw_progress_bar();
-    void draw_table();
+    // прогресс - worker-поток пишет напрямую (gui.curr.store(...), и т.д.)
+    std::atomic<int> curr{ 0 };
+    std::atomic<int> total{ 0 };
+    std::atomic<std::shared_ptr<std::string>> filename;
 
-    void draw_check_box();
-    void save_button();
-    void back_button();
-    void observe_button();
-    void continue_button();
+    // навигация между экранами
+    Screen getScreen();
+    void setScreen(Screen);
 
-    std::string get_input();
-    void set_progress_bar(float);
-    void set_table(
-        const std::unordered_map<std::string, int>& type,
-        const std::unordered_map<std::string, std::unordered_map<std::string, int>>& sub_type
+    // события от gui (кнопки)
+    FrameworkEvent getEvent();
+    void eventProcessed();
+
+    // поле ввода пути/ссылки
+    std::string getInput();
+    void setInput(std::string); // Принимает ввод из selectDialog.
+
+    // выбранные расширения файлов
+    ChosenExtensions getExtensions();
+
+    // сообщение об ошибке / текст прогресс-бара — вызываются из main
+    void setErrorMassege(std::shared_ptr<std::string>);
+    void setProgressBarText(std::shared_ptr<std::string>);
+
+    // таблица результатов
+    void setTable(
+        const std::map<std::string, int>&,
+        const std::map<std::string, std::map<std::string, int>>&
     );
-
-    void incorrect_input(std::string);
-    void draw_error_message();
 };

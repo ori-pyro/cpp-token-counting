@@ -1,317 +1,221 @@
-#include <iostream>
-#include <fstream>
-#include <filesystem>
 #include <string>
 #include <thread>
 #include <atomic>
-#include <unordered_map>
-#include <cpr/cpr.h>
-#include <nlohmann/json.hpp>
-#include "cpr/api.h"
-#include "cpr/cprtypes.h"
-#include "cpr/response.h"
+#include <memory>
+#include <map>
+
 #include "framework.h"
-#include "nlohmann/json_fwd.hpp"
 #include "parser.h"
 
-#ifndef GITHUB_TOKEN
-#define GITHUB_TOKEN ""
-#endif
+#define Rectangle WinRectangle
+#define CloseWindow WinCloseWindow
+#define ShowCursor WinShowCursor
 
-std::string github_token = GITHUB_TOKEN;
+#include "file_manager.h"
 
-using namespace std;
-namespace fs = filesystem;
-using json = nlohmann::json;
+#undef Rectangle
+#undef CloseWindow
+#undef ShowCursor
 
-// Меж поточные переменные
-atomic<Work_state> work_state_atomic{ WAITING_INPUT };
-atomic<float> progress_bar_fraction_atomic{ 0.0f };
-char shared_file_name_buffer[512] = { 0 };
-atomic<bool> file_name_updated{ false };
+// enum class Screen { InputScreen, LoadingScreen, TableScreen };
 
-unordered_map<string, int> tokens;
-unordered_map<string, unordered_map<string, int>> detailedTokens;
+// enum class FrameworkEvent { Empty, ContinuePressed, BackPressed, SavePressed, BrowsePressed };
+// enum class FileManagerEvent { Empty,
+//                               PathEnterd, URLEntered, IncorrectEntered,
+//                               SaveDialogOpened, BrowseDialogOpened,
+//                               ScanStarted, WorkStarted, Working };
 
-bool has_error = false;
-string error_massege;
+struct Table {
+    std::atomic<std::shared_ptr<std::map<std::string, int>>> rows;
+    std::atomic<std::shared_ptr<std::map<std::string, std::map<std::string, int>>>> sub_rows;
+};
 
-bool cpp = false;
-bool cc = false;
-bool cxx = false;
-bool h = false;
-bool hpp = false;
-bool hh = false;
-bool hxx = false;
+void work(Parser& parser, std::shared_ptr<FileIterator> fileIterator, Framework& gui, std::atomic<bool>& is_work_finished) {
+    for (auto& iter : *fileIterator) {
+        parser.parse(*iter.text);
 
-int cpp_cnt = 0;
-int cc_cnt = 0;
-int cxx_cnt = 0;
-int h_cnt = 0;
-int hpp_cnt = 0;
-int hh_cnt = 0;
-int hxx_cnt = 0;
-
-bool is_chosen(const std::string& extension) {
-    if ((extension == ".cpp") && cpp)      { cpp_cnt++; return true; }
-    else if ((extension == ".cc") && cc)   { cc_cnt++; return true; }
-    else if ((extension == ".cxx") && cxx) { cxx_cnt++; return true; }
-    else if ((extension == ".h") && h)     { h_cnt++; return true; }
-    else if ((extension == ".hpp") && hpp) { hpp_cnt++; return true; }
-    else if ((extension == ".hh") && hh)   { hh_cnt++; return true; }
-    else if ((extension == ".hxx") && hxx) { hxx_cnt++; return true; }
-    return false;
-}
-
-void update_files_count() {
-    tokens["file"] = cpp_cnt + cc_cnt + cxx_cnt + h_cnt + hpp_cnt + hpp_cnt + hh_cnt + hxx_cnt;
-    detailedTokens["file"][".cpp"] = cpp_cnt;
-    detailedTokens["file"][".cc"] = cc_cnt;
-    detailedTokens["file"][".cxx"] = cxx_cnt;
-    detailedTokens["file"][".h"] = h_cnt;
-    detailedTokens["file"][".hpp"] = hpp_cnt;
-    detailedTokens["file"][".hh"] = hh_cnt;
-    detailedTokens["file"][".hxx"] = hxx_cnt;
-}
-
-bool error_check(cpr::Response& response) {
-    // Ошибки сети
-    if (response.error) {
-        has_error = true;
-        error_massege = "Ошибка сети: " + response.error.message;
-        work_state_atomic = WAITING_INPUT;
-        return false;
-    }
-    // Ошибки HTTP
-    else if (response.status_code != 200) {
-        has_error = true;
-        error_massege = "Ошибка HTTP: " + std::to_string(response.status_code);
-        work_state_atomic = WAITING_INPUT;
-        return false;
-    }
-    // Всё ОК
-    else {
-        return true;
-    }
-}
-
-void token_counting_online(std::string dir_url) {
-    Parser parser;
-
-    // TODO Сделать валидацию URL черещ re2
-
-    // 1. Запрашиваем общую информацию о проекте, чтобы получить deafult_branch
-    string repos_info_url = "https://api.github.com/repos/" + dir_url.substr(19);
-    cpr::Response git_repos_info_response = cpr::Get(cpr::Url(repos_info_url),
-                                            cpr::Header{{"User-Agent", "token_counter"},
-                                                        {"Authorization", "Bearer " + github_token}});
-    if (!error_check(git_repos_info_response)) { return; }
-    json git_repos_info_json = json::parse(git_repos_info_response.text);
-    string repos_default_branch = git_repos_info_json["default_branch"];
-
-    // 2. Запрашиваем структуру проекта
-    cpr::Url repos_git_tree_url(repos_info_url + "/git/trees/" + repos_default_branch);
-    cpr::Response git_repos_git_tree_response = cpr::Get(repos_git_tree_url,
-                                                cpr::Parameters{{"recursive", "1"}},
-                                                cpr::Header{{"User-Agent", "token_counter"},
-                                                            {"Authorization", "Bearer " + github_token},
-                                                            {"Accept", "application/vnd.github+json"}});
-    if (!error_check(git_repos_git_tree_response)) { return; }
-    json git_repos_git_tree_json = json::parse(git_repos_git_tree_response.text);
-
-    // Вектор для асинхронной загрузки файлов
-    std::vector<std::pair<std::string, std::string>> files_to_download;
-    const size_t BATCH_SIZE = 20;
-
-
-    // 3. Собираем все URL для скачивания
-    for (auto& tree: git_repos_git_tree_json["tree"]) {
-        if (tree["type"] == "blob") {
-            fs::path entry_path(tree["path"]);
-            std::string extension = fs::path(tree["path"]).extension().string();
-
-            if (is_chosen(extension)) {
-                cpr::Url blob_text_url = "https://raw.githubusercontent.com/" +
-                                        dir_url.substr(19) + "/" +
-                                        repos_default_branch + "/" +
-                                        entry_path.generic_string(); // generic_string - всегда прямые слеши, чтобы не сломать HTTP запрос
-
-                // Запускаем запрос асинхронно, не дожидаясь ответа
-                files_to_download.emplace_back(
-                    entry_path.filename().string(),
-                    blob_text_url);
-            }
-        }
-    }
-
-    int curr_file_number = 0;
-
-    int count_of_files = files_to_download.size();
-
-    // 4. Качаем пачками
-    for (size_t i = 0; i < files_to_download.size(); i += BATCH_SIZE) {
-        std::vector<std::pair<std::string, cpr::AsyncResponse>> pending_requests;
-
-        // Запускаем очередную пачку
-        for (size_t j = i; j < std::min(i + BATCH_SIZE, files_to_download.size()); ++j) {
-            pending_requests.emplace_back(
-                files_to_download[j].first,
-                cpr::GetAsync(cpr::Url{files_to_download[j].second})
-            );
-        }
-
-        // Ждем выполнения текущей пачки
-        for (auto& [file_name, future_response] : pending_requests) {
-            cpr::Response response = future_response.get();
-
-            curr_file_number++;
-            progress_bar_fraction_atomic = static_cast<float>(curr_file_number) / count_of_files;
-            std::string file_name_and_fraction = to_string(curr_file_number) + "/" + to_string(count_of_files) + " " + file_name;
-            size_t copy_size = std::min(file_name_and_fraction.size(), sizeof(shared_file_name_buffer) - 1);
-            memcpy(shared_file_name_buffer, file_name_and_fraction.data(), copy_size);
-            shared_file_name_buffer[copy_size] = '\0';
-            file_name_updated = true;
-
-            if (error_check(response)) {
-                parser.parser(response.text);
-            } else {
-                return; // Если упали по ошибке сети — выходим
-            }
-        }
+        // отдаём инфу для вывода в прогресс бар в atomic переменные
+        gui.curr.store(iter.curr);
+        gui.filename.store(std::move(iter.filename));
+        gui.setProgressBarText(nullptr);
     }
     parser.Summ();
-
-    // копируем
-    tokens = parser.tokens;
-    detailedTokens = parser.detailedTokens;
-
-    update_files_count();
-
-    parser.clear_table();
-
-    work_state_atomic = SHOW_TABLE;
-    has_error = false;
+    is_work_finished.store(true);
 }
 
-void token_counting_offline(std::string dir_path) {
+void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table& table, std::atomic<bool>& is_work_finished, std::atomic<std::shared_ptr<FileIterator>>& fileIterator) {
+    while (gui.running) {
+        switch (gui.getScreen()) {
+            // ЭКРАН ВВОДА
+            case Screen::InputScreen: {
+                switch(fileManager.getEvent()) {
+                    // ОТКРЫТО ОКНО ВЫБОРА ПАПКИ
+                    case FileManagerEvent::BrowseDialogOpened: {
+                        if (fileManager.updateBrowseDialog()) {
+                            gui.setInput(fileManager.getPath());
+                            fileManager.eventProcessed(); // сбраысваем любые ивенты от gui
+                        }
+                        break;
+                    }
+                    // ОКНО ВЫБОРА ПАПКИ НЕ ОТКРЫТО => обрабатываем ввод
+                    default: {
+                        switch (gui.getEvent()) {
+                            // НАЖАТА ПРОДОЛЖИТЬ
+                            case FrameworkEvent::ContinuePressed: {
+                                fileManager.setExtensions(gui.getExtensions());
+                                fileManager.recognizeInput(gui.getInput());
+                                switch (fileManager.getEvent()) {
+                                    // РАСПОЗНАН ПУТЬ К ПАПКЕ
+                                    case FileManagerEvent::PathEnterd: {
+                                        std::thread reposScanThread(&FileManager::startPathScan, &fileManager);
+                                        reposScanThread.detach();
 
-    Parser parser;
+                                        gui.setScreen(Screen::LoadingScreen);
+                                        gui.setProgressBarText(std::make_shared<std::string>("Подготовка..."));
+                                        fileManager.eventProcessed();
+                                        break;
+                                    }
+                                    // РАСПОЗНАНА ССЫЛКА НА ГИТХАБ
+                                    case FileManagerEvent::URLEntered: {
+                                        std::thread reposScanThread(&FileManager::startURLScan, &fileManager);
+                                        reposScanThread.detach();
 
-    int count_of_files = 0;
-    int curr_file_number = 0;
+                                        gui.setScreen(Screen::LoadingScreen);
+                                        gui.setProgressBarText(std::make_shared<std::string>("Подготовка..."));
+                                        fileManager.eventProcessed();
+                                        break;
+                                    }
+                                    // НЕКОРРЕКТНЫЙ ВВОД
+                                    case FileManagerEvent::IncorrectEntered: {
+                                        gui.setErrorMassege(fileManager.getErrorMassege());
+                                        fileManager.eventProcessed();
+                                        break;
+                                    }
+                                    default: { break; }
+                                }
 
-    for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-        std::string extension = entry.path().extension().string();
+                                gui.eventProcessed();
+                                break;
+                            }
+                            // НАЖАТА ОБЗОР
+                            case FrameworkEvent::BrowsePressed: {
+                                fileManager.openBrowseDialog();
+                                // ... Запуск даилога выбора папки
 
-        if (is_chosen(extension)) {
-            count_of_files++;
-        }
-    }
+                                gui.eventProcessed();
+                                break;
+                            }
+                        }
+                    }
+                }
 
-    // Проход по всем файлам
-    for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
-        std::string extension = entry.path().extension().string();
 
-        if (is_chosen(extension)) {
+                break;
+            }
+            // ЭКРАН ЗАГРУЗКИ
+            case Screen::LoadingScreen: {
+                // ПАРСИНГ ЗАВЕРШЁН
+                if (is_work_finished) {
+                    // Загружаем результаты в таблицу
 
-            // Передаём в прогрессбар инфу
-            curr_file_number++;
-            progress_bar_fraction_atomic = static_cast<float>(curr_file_number)/count_of_files;
-            std::string file_name = to_string(curr_file_number) + "/" + to_string(count_of_files) + " " + entry.path().filename().string();
-            size_t copy_size = std::min(file_name.size(), sizeof(shared_file_name_buffer) - 1);
-            memcpy(shared_file_name_buffer, file_name.data(), copy_size);
-            shared_file_name_buffer[copy_size] = '\0'; // Строка обязана заканчиваться нулем
-            file_name_updated = true;
+                    // Берём таблицу из parser
+                    std::shared_ptr<std::map<std::string, int>> tokens = parser.getTokens();
+                    std::shared_ptr<std::map<std::string, std::map<std::string, int>>> detailedTokens = parser.getDetailedTokens();
+                    // Добавляем инфу из fileManager
+                    (*tokens)["file"] = fileManager.total;
+                    (*detailedTokens)["file"] = fileManager.getExtensionCount();
+                    // Загружаем в таблицу
+                    table.rows.store(tokens);
+                    table.sub_rows.store(detailedTokens);
+                    // Передаём в gui
+                    gui.setTable(*table.rows.load(), *table.sub_rows.load());
 
-            fstream file(entry.path(), ios::in);        // Создаём объект файла и открываем для чтения
-            if (file.is_open()) {
-                stringstream buffer;
-                buffer << file.rdbuf();
-                string code = buffer.str(); // Весь код в одну строку
-                parser.parser(code);
+                    gui.setScreen(Screen::TableScreen);
+                    fileManager.eventProcessed();
+                    break;
+                }
+
+                switch (fileManager.getEvent()) {
+                    // ЗАПУСКАЕМ РАБОТУ
+                    case FileManagerEvent::WorkStarted: {
+                        fileIterator.store(fileManager.getFileIterator());
+                        gui.total.store(fileManager.total);
+
+                        std::thread parserThread(work, std::ref(parser), fileIterator.load(), std::ref(gui), std::ref(is_work_finished));
+                        parserThread.detach();
+
+                        fileManager.eventProcessed();
+                        break;
+                    }
+                    // ВЫВОДИМ СОСТОЯНИЕ РАБОТЫ
+                    case FileManagerEvent::Working: {
+                        // ... Сидим не рыпаемся
+
+                        break;
+                    }
+                }
+                break;
+            }
+            // ЭКРАН ТАБЛИЦЫ
+            case Screen::TableScreen: {
+                switch(fileManager.getEvent()) {
+                    // ОКНО СОХРАНЕНИЯ ОТКРЫТО
+                    case FileManagerEvent::SaveDialogOpened: {
+                        if (fileManager.updateSaveDialog()) {
+                            fileManager.save(fileManager.getSavePath(), *table.rows.load(), *table.sub_rows.load());
+                            fileManager.eventProcessed();
+                        }
+                        break;
+                    }
+                    // ОКНО СОХРАНЕНИЯ НЕ ОТКРЫТО => обрабатываем ввод
+                    default: {
+                        switch(gui.getEvent()) {
+                            case FrameworkEvent::SavePressed: {
+                                fileManager.openSaveDialog();
+
+                                gui.eventProcessed();
+                                break;
+                            }
+                            case FrameworkEvent::BackPressed: {
+                                is_work_finished.store(false);
+
+                                // TODO Чистим таблицу и прогресс бар и вообще всё чистим на всякий случай
+                                parser.clear_table();
+                                gui.curr.store(0);
+                                gui.total.store(0);
+                                gui.setProgressBarText(nullptr);
+                                gui.setErrorMassege(nullptr);
+
+                                gui.setScreen(Screen::InputScreen);
+                                gui.eventProcessed();
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                break;
             }
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // просто ждём, чтобы не перегрузить процессор
     }
-    parser.Summ();
-
-    // копируем
-    tokens = parser.tokens;
-    detailedTokens = parser.detailedTokens;
-
-    update_files_count();
-
-    parser.clear_table();
-
-    work_state_atomic = SHOW_TABLE;
-    has_error = false;
 }
 
 int main() {
+    Framework gui;
 
-    Framework GUI;
-    std::string input_str;
+    Parser parser;
+    FileManager fileManager;
+    Table table;
 
-    while (!WindowShouldClose()) {
+    std::atomic<bool> is_work_finished = false;
+    std::atomic<std::shared_ptr<FileIterator>> fileIterator;
 
-        // Рисуем
-        if (GUI.work_state == SHOULD_CLOSE) {
-            return 0;
-        } else {
-            GUI.update();
-        }
+    // Запускаем логику-диспетчер в отдельном потоке
+    std::thread dispatcherThread(dispatcher, std::ref(gui), std::ref(fileManager), std::ref(parser), std::ref(table), std::ref(is_work_finished), std::ref(fileIterator));
+    dispatcherThread.detach();
 
-
-        // Запускается после того как пользователь нажал ВВОД
-        if (GUI.work_state == JUST_INPUT) {
-            input_str = GUI.get_input();
-
-            cpp = GUI.cpp;
-            cc = GUI.cc;
-            cxx = GUI.cxx;
-            h = GUI.h;
-            hpp = GUI.hpp;
-            hh = GUI.hh;
-            hxx = GUI.hxx;
-
-            // URL
-            if (input_str.substr(0, 8) == "https://") {
-                std::thread analyzer(token_counting_online, input_str);
-                analyzer.detach();
-                GUI.work_state = WORK_IN_PROGRESS;
-            }
-            // Локальная папка
-            else if (fs::exists(input_str)) {
-                fs::path local_path(input_str);
-                std::thread analyzer(token_counting_offline, local_path.string());
-                analyzer.detach();
-                GUI.work_state = WORK_IN_PROGRESS;
-            }
-            else {
-                GUI.incorrect_input("Некорректный URL или путь");
-            }
-        }
-
-        if (GUI.work_state == WORK_IN_PROGRESS) {
-            if (has_error) {
-                GUI.work_state = WAITING_INPUT;
-                GUI.incorrect_input(error_massege);
-                continue;
-            }
-
-            // Обновляем progressbar
-            GUI.progress_bar_fraction = progress_bar_fraction_atomic.load();
-            GUI.progress_bar_text = std::string(shared_file_name_buffer);
-            file_name_updated = false;
-
-            // Если паралельный алгоритм завершил работу
-            if (work_state_atomic == SHOW_TABLE) {
-                GUI.work_state = SHOW_TABLE;
-                GUI.set_table(tokens, detailedTokens);
-
-                work_state_atomic = WAITING_INPUT; // Если пользователь нажмёт ОТМЕНА
-            }
-        }
-    }
+    gui.loop();
 
     return 0;
 }

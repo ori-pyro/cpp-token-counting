@@ -1,5 +1,7 @@
 #include <string>
 #include <re2/re2.h>
+#include <map>
+#include <memory>
 #include <unordered_set>
 
 class Parser {
@@ -239,8 +241,9 @@ public:
 
     re2::StringPiece rest;
 
-    void parser(std::string&);
-
+    void parse(std::string&);
+    std::shared_ptr<std::map<std::string, int>> getTokens();
+    std::shared_ptr<std::map<std::string, std::map<std::string, int>>> getDetailedTokens();
     // Запускаем если начинается с числа или точки
     void digit_analyze();
 
