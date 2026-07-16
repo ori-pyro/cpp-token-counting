@@ -34,15 +34,7 @@ struct FileIterator {
     FileData data;
 
     // Конструктор
-    explicit FileIterator(const fs::path& root, ChosenExtensions ext) : dirIterator(root), endIterator(), chosen(ext) {
-        while (dirIterator != endIterator) {
-            if (dirIterator->is_regular_file() && chosen.check(dirIterator->path().extension().string())) {
-                break;
-            }
-            ++dirIterator;
-        }
-        fillCurrentData(); // заполняем data для ПЕРВОГО элемента сразу в конструкторе
-    }
+    explicit FileIterator(const fs::path&, ChosenExtensions);
     void fillCurrentData();
 
     FileIterator& operator++();

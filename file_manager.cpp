@@ -10,15 +10,28 @@
 namespace fs = std::filesystem;
 
 // ========= FileIterator =========
+
+// Конструктор
+FileIterator::FileIterator(const fs::path& root, ChosenExtensions ext) : dirIterator(root), endIterator(), chosen(ext) {
+    while (dirIterator != endIterator) {
+        if (dirIterator->is_regular_file() && chosen.check(dirIterator->path().extension().string())) {
+            break;
+        }
+        ++dirIterator;
+    }
+    fillCurrentData(); // заполняем data для ПЕРВОГО элемента сразу в конструкторе
+}
 void FileIterator::fillCurrentData() {
     if (dirIterator != endIterator) {
         ++data.curr;
         data.filename = std::make_shared<std::string>(dirIterator->path().filename().string());
         std::fstream file(dirIterator->path(), std::ios::in);
-        if (file.is_open()) {
+        if (file.is_open()) { // ! Слабое место
             std::stringstream buffer;
             buffer << file.rdbuf();
             data.text = std::make_shared<std::string>(buffer.str());
+        } else {
+            std::cout << "not open" << std::endl;
         }
     }
 }
@@ -35,9 +48,6 @@ FileIterator& FileIterator::operator++() {
     return *this;
 }
 FileIterator FileIterator::begin() {
-    if (dirIterator != endIterator) {
-        operator++(); // Находим первый файл, который не папка
-    }
     return *this;
 }
 FileIterator FileIterator::end() {
