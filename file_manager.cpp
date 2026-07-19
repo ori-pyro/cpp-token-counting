@@ -18,7 +18,7 @@ using json = nlohmann::json;
 
 
 bool isValidGithubURL(const std::string& URL, std::string& owner, std::string& repos) {
-    static const RE2 pattern(R"(^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git))");
+    static const RE2 pattern(R"(^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)(?:\.git)?)");
     return RE2::FullMatch(URL, pattern, &owner, &repos);
 }
 
