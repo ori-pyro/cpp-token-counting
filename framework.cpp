@@ -144,11 +144,6 @@ void Framework::drawInputScreen() {
         // Поле ввода, кнопка обзор
         drawInputField(); ImGui::SameLine(); browseButton();
 
-        ImGui::Dummy(ImVec2(0.0f, 15.0f));
-        ImGui::PushStyleColor(ImGuiCol_Text, BASIC_COLOR_ACTIVATED);
-            ImGui::Text("! URL пока не работают");
-        ImGui::PopStyleColor();
-
         // Чекбоксы
         drawCheckBox();
 
