@@ -30,20 +30,27 @@ struct Table {
     std::atomic<std::shared_ptr<std::map<std::string, std::map<std::string, int>>>> sub_rows;
 };
 
-void work(Parser& parser, std::shared_ptr<FileIterator> fileIterator, Framework& gui, std::atomic<bool>& is_work_finished) {
-    for (auto& iter : *fileIterator) {
+template <typename iteratorT>
+void work(Parser& parser, std::shared_ptr<iteratorT> iterator, Framework& gui, std::atomic<bool>& is_work_finished) {
+    auto end_marker = iterator->end();
+
+    while (*iterator != end_marker) {
+        auto& iter = **iterator;
+
         parser.parse(*iter.text);
 
         // отдаём инфу для вывода в прогресс бар в atomic переменные
         gui.curr.store(iter.curr);
         gui.filename.store(std::move(iter.filename));
         gui.setProgressBarText(nullptr);
+
+        ++(*iterator);
     }
     parser.Summ();
     is_work_finished.store(true);
 }
 
-void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table& table, std::atomic<bool>& is_work_finished, std::atomic<std::shared_ptr<FileIterator>>& fileIterator) {
+void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table& table, std::atomic<bool>& is_work_finished) {
     while (gui.running) {
         switch (gui.getScreen()) {
             // ЭКРАН ВВОДА
@@ -66,7 +73,7 @@ void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table&
                                 fileManager.recognizeInput(gui.getInput());
                                 switch (fileManager.getEvent()) {
                                     // РАСПОЗНАН ПУТЬ К ПАПКЕ
-                                    case FileManagerEvent::PathEnterd: {
+                                    case FileManagerEvent::PathEntered: {
                                         std::thread reposScanThread(&FileManager::startPathScan, &fileManager);
                                         reposScanThread.detach();
 
@@ -87,7 +94,7 @@ void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table&
                                     }
                                     // НЕКОРРЕКТНЫЙ ВВОД
                                     case FileManagerEvent::IncorrectEntered: {
-                                        gui.setErrorMassege(fileManager.getErrorMassege());
+                                        gui.setErrorMassege(fileManager.getErrorMessage());
                                         fileManager.eventProcessed();
                                         break;
                                     }
@@ -137,20 +144,30 @@ void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table&
 
                 switch (fileManager.getEvent()) {
                     // ЗАПУСКАЕМ РАБОТУ
-                    case FileManagerEvent::WorkStarted: {
-                        fileIterator.store(fileManager.getFileIterator());
-                        gui.total.store(fileManager.total);
+                    case FileManagerEvent::PrepareFinished: {
+                        switch (fileManager.getInputType()) {
+                            case InputType::Path: {
+                                std::thread parserThread(work<FileIterator>, std::ref(parser), fileManager.getFileIterator(), std::ref(gui), std::ref(is_work_finished));
+                                parserThread.detach();
+                                fileManager.resetInputType();
+                            }
 
-                        std::thread parserThread(work, std::ref(parser), fileIterator.load(), std::ref(gui), std::ref(is_work_finished));
-                        parserThread.detach();
+                            case InputType::Url: {
+                                std::thread parserThread(work<URLIterator>, std::ref(parser), fileManager.getURLIterator(), std::ref(gui), std::ref(is_work_finished));
+                                parserThread.detach();
+                                fileManager.resetInputType();
+                            }
+                        }
+
+                        gui.total.store(fileManager.total);
 
                         fileManager.eventProcessed();
                         break;
                     }
                     // ВЫВОДИМ СОСТОЯНИЕ РАБОТЫ
-                    case FileManagerEvent::Working: {
-                        // ... Сидим не рыпаемся
-
+                    case FileManagerEvent::NetworkError: {
+                        gui.setErrorMassege(fileManager.getErrorMessage());
+                        gui.setScreen(Screen::InputScreen);
                         break;
                     }
                 }
@@ -209,10 +226,9 @@ int main() {
     Table table;
 
     std::atomic<bool> is_work_finished = false;
-    std::atomic<std::shared_ptr<FileIterator>> fileIterator;
 
     // Запускаем логику-диспетчер в отдельном потоке
-    std::thread dispatcherThread(dispatcher, std::ref(gui), std::ref(fileManager), std::ref(parser), std::ref(table), std::ref(is_work_finished), std::ref(fileIterator));
+    std::thread dispatcherThread(dispatcher, std::ref(gui), std::ref(fileManager), std::ref(parser), std::ref(table), std::ref(is_work_finished));
     dispatcherThread.detach();
 
     gui.loop();
