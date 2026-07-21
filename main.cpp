@@ -150,12 +150,14 @@ void dispatcher(Framework& gui, FileManager& fileManager, Parser& parser, Table&
                                 std::thread parserThread(work<FileIterator>, std::ref(parser), fileManager.getFileIterator(), std::ref(gui), std::ref(is_work_finished));
                                 parserThread.detach();
                                 fileManager.resetInputType();
+                                break;
                             }
 
                             case InputType::Url: {
                                 std::thread parserThread(work<URLIterator>, std::ref(parser), fileManager.getURLIterator(), std::ref(gui), std::ref(is_work_finished));
                                 parserThread.detach();
                                 fileManager.resetInputType();
+                                break;
                             }
                         }
 
