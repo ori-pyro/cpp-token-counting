@@ -52,11 +52,14 @@ void Parser::parse(std::string& text) {
             || separator == ":]" || separator == "%>" || separator == ":>"
             || separator.empty())
         ) {
-            if (separator == "//" || separator == "#") {
+            if (separator == "//" || separator == "#" || separator == "##") {
                 if (separator == "//") {
                     tokens["comment"]++;
-                } else if (separator == "#") {
+                } else if (separator == "#" ) {
                     detailedTokens["operator-or-punctuator"]["#"]++;
+                }
+                else if (separator == "##"){
+                   detailedTokens["operator-or-punctuator"]["##"]++; 
                 }
                 skip_to_end_of_line();
                 need_to_check_prev_token = false;
@@ -110,12 +113,12 @@ void Parser::parse(std::string& text) {
 
 // Запускаем если начинается с числа или точки
 void Parser::digit_analyze() {
-    if (RE2::Consume(&rest, float_exp)) {
+    if (RE2::Consume(&rest, float_skip)) {
         if (!is_user_defined_literal()){
             detailedTokens["literal"]["floating-point-literal"]++;
         }
-    } else {
-        RE2::Consume(&rest, int_skip);
+    } else{
+        RE2::Consume(&rest,int_skip); 
         if (!is_user_defined_literal()) {
             detailedTokens["literal"]["integer-literal"]++;
         }

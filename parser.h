@@ -231,8 +231,8 @@ public:
     }; //TODO приплюсовать в tokens
 
     RE2 separators = RE2(R"((>>=|<<=|>>|<<|&&|\|\||\+\+|//|/\*|--|<=>|>=|<=|==|\+=|-=|\*=|/=|%=|^=|&=|\|=|!=|<%|%>|<:|:>|\.\.\.|::|\.\*|->|->\*|\^\^|[][(){};:?~!*/%\^&|=<>,.+\-#]|\s+))");
-    RE2 float_exp = RE2(R"((\d*\.\d*[eE]?[-+]?\d*[fF]?))");
-    RE2 int_skip = RE2(R"([0-9'A-Fa-fxXbB]+)");
+    RE2 float_skip = RE2(R"(([0-9'xXA-Fa-f]*\.[0-9A-Fa-f'LlpPbB+-]*)|([0-9']*[Ee][+0-9fFLl'-]*)|(0[0-9'xXA-Fa-f]+[bBpP]+[0-9'A-Fa-f+-]*))");
+    RE2 int_skip = RE2(R"([0-9'XxA-Fa-f]+[uUlL]*)");
     RE2 string_consume = RE2(R"("(([^"\\]|\\.)*"))");
     RE2 raw_string_begin = RE2(R"(R"([^(]*)\()");
     RE2 character_consume = RE2(R"('([^'\\]|\\.)*')");
